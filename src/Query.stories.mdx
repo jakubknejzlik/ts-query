@@ -1,0 +1,312 @@
+import { Meta } from '@storybook/addon-docs';
+
+<Meta title="1. Query" />
+
+# Query Builder
+
+The Query Builder is a powerful tool that allows developers to construct SQL queries without having to write raw SQL. By offering a fluent interface, it simplifies the process of creating complex queries and ensures that the syntax is correct, reducing the risk of errors.
+
+## Basic Usage
+
+The foundation of any query starts with the `Query.select` method. This method initializes the query building process:
+
+```ts
+const query = Query.select('tableName');
+```
+
+### Selecting Fields
+
+Instead of selecting all fields, you can specify which columns you want to retrieve:
+
+```ts
+const queryWithFields = Query.select('table').field('fieldName');
+```
+
+If you need to rename a column in the result set, you can provide an alias:
+
+```ts
+const queryWithAlias = Query.select('table').field('fieldName', 'aliasName');
+```
+
+You can also add multiple fields at once:
+
+```ts
+const queryWithAlias = Query.select('table').addFields([
+  { name: 'fieldName1', alias: 'aliasName1' },
+  { name: 'fieldName2', alias: 'aliasName2' },
+]);
+```
+
+Or you can reset all specified fields:
+
+```ts
+const queryWithAlias = Query.select('table')
+  .field('fieldNameA')
+  .fields([{ name: 'fieldNameB' }]);
+// -> SELECT fieldNameB FROM `table`
+```
+
+### Table Aliasing:
+
+Sometimes, for the sake of clarity or to avoid column name conflicts, you might want to alias a table:
+
+```ts
+const aliasedTableQuery = Query.select('table', 't');
+```
+
+### Joining Tables
+
+Join operations are essential in SQL for combining rows from two or more tables based on a related column. The Query Builder supports various types of joins: INNER, LEFT, RIGHT, and FULL joins.
+
+### Basic Join
+
+To perform a basic join (INNER JOIN by default):
+
+```ts
+const joinedQuery = Query.select('users').join(
+  Query.table('orders', 'o'),
+  Conditions.columnEqual('users.id', 'o.user_id')
+);
+```
+
+### Specific Join Types
+
+You can specify the type of join you need:
+
+- **Inner Join**: Combines rows from different tables when the join condition is met.
+
+  ```ts
+  const innerJoinedQuery = Query.select('users').innerJoin(
+    Query.table('orders', 'o'),
+    Conditions.columnEqual('users.id', 'o.user_id')
+  );
+  ```
+
+- **Left Join**: Returns all rows from the left table, and the matched rows from the right table. If no match, NULLs are returned for columns of the right table.
+
+  ```ts
+  const leftJoinedQuery = Query.select('users').leftJoin(
+    Query.table('orders', 'o'),
+    Conditions.columnEqual('users.id', 'o.user_id')
+  );
+  ```
+
+- **Right Join**: Similar to the left join, but returns all rows from the right table and matched rows from the left table.
+
+  ```ts
+  const rightJoinedQuery = Query.select('users').rightJoin(
+    Query.table('orders', 'o'),
+    Conditions.columnEqual('users.id', 'o.user_id')
+  );
+  ```
+
+- **Full Join**: Combines the results of both left and right joins. It returns rows when there is a match in either left or right table.
+
+  ```ts
+  const fullJoinedQuery = Query.select('users').fullJoin(
+    Query.table('orders', 'o'),
+    Conditions.columnEqual('users.id', 'o.user_id')
+  );
+  ```
+
+### Join Conditions
+
+The join condition is specified using the `Conditions` object. This condition determines how the tables are joined.
+
+For example, joining users and orders on user ID:
+
+```ts
+const joinCondition = Conditions.columnEqual('users.id', 'o.user_id');
+```
+
+### Multiple Joins
+
+You can chain multiple joins to combine more than two tables:
+
+```ts
+const multiJoinedQuery = Query.select('users')
+  .innerJoin(
+    Query.table('orders', 'o'),
+    Conditions.columnEqual('users.id', 'o.user_id')
+  )
+  .leftJoin(
+    Query.table('products', 'p'),
+    Conditions.columnEqual('o.product_id', 'p.id')
+  );
+```
+
+### Aliasing in Joins
+
+When joining tables, especially with multiple joins, it's often useful to alias tables for clarity and to resolve column name conflicts:
+
+```ts
+const aliasedJoinQuery = Query.select('users', 'u').leftJoin(
+  Query.table('orders', 'o'),
+  Conditions.columnEqual('u.id', 'o.user_id')
+);
+```
+
+### Complex Join Conditions
+
+Join conditions can be more complex, involving logical operators like AND, OR:
+
+```ts
+const complexJoinCondition = Conditions.and([
+  Conditions.columnEqual('users.id', 'o.user_id'),
+  Conditions.greaterThan('orders.amount', 100),
+]);
+
+const complexJoinedQuery = Query.select('users').innerJoin(
+  Query.table('orders', 'o'),
+  complexJoinCondition
+);
+```
+
+### WHERE Conditions
+
+Filtering the data you retrieve is a common operation. The `where` method allows you to specify conditions to limit the rows returned:
+
+```ts
+const queryWithCondition = Query.select('table').where(
+  Conditions.equal('fieldName', value)
+);
+```
+
+### LIMIT and OFFSET
+
+In scenarios where you don't want to retrieve all rows, you can limit the result set:
+
+```ts
+const limitedQuery = Query.select('table').limit(10);
+```
+
+If you want to skip a certain number of rows before retrieving the result set, use the offset method:
+
+```ts
+const offsetQuery = Query.select('table').offset(5);
+```
+
+### ORDER BY
+
+Sorting your result set can be achieved using the `orderBy` method:
+
+```ts
+const orderedQuery = Query.select('table').orderBy('fieldName');
+```
+
+If you need the sorting to be in descending order:
+
+```ts
+const descOrderedQuery = Query.select('table').orderBy('fieldName', 'DESC');
+```
+
+### GROUP BY
+
+When you want to group rows that have the same values in specified columns into summary rows:
+
+```ts
+const groupedQuery = Query.select('table').groupBy('fieldName');
+```
+
+### Complex Table Sources:
+
+For more advanced queries, you might need to use subqueries as a table source:
+
+```ts
+const subQuery = Query.select('table').where(Conditions.equal('field', value));
+const mainQuery = Query.select(subQuery, 't');
+```
+
+## Examples
+
+### Basic Select Query
+
+A simple example to retrieve all columns from a table:
+
+```ts
+const basicQuery = Query.select('foo');
+console.log(basicQuery.toSQL()); // Outputs: SELECT * FROM `foo`
+```
+
+### Query with Multiple Conditions
+
+A more complex example showcasing multiple conditions:
+
+```ts
+const multiConditionQuery = Query.select('users')
+  .field('id')
+  .field('name')
+  .where(
+    Conditions.and([
+      Conditions.equal('age', 25),
+      Conditions.or([
+        Conditions.greaterThan('salary', 50000),
+        Conditions.like('position', 'manager%'),
+      ]),
+    ])
+  )
+  .orderBy('salary', 'DESC')
+  .limit(10)
+  .offset(5);
+
+console.log(multiConditionQuery.toSQL());
+// Outputs: SELECT `id`, `name` FROM `users` WHERE (`age` = 25 AND (`salary` > 50000 OR `position` LIKE 'manager%')) ORDER BY salary DESC LIMIT 10 OFFSET 5
+```
+
+### Query with Nested Conditions
+
+Queries can also have nested conditions for more intricate filtering:
+
+```ts
+const nestedConditionQuery = Query.select('products').where(
+  Conditions.and([
+    Conditions.between('price', [10, 50]),
+    Conditions.or([
+      Conditions.like('name', '%apple%'),
+      Conditions.notLike('description', '%refurbished%'),
+    ]),
+  ])
+);
+
+console.log(nestedConditionQuery.toSQL());
+// Outputs: SELECT * FROM `products` WHERE (`price` BETWEEN 10 AND 50 AND (`name` LIKE '%apple%' OR `description` NOT LIKE '%refurbished%'))
+```
+
+## Immutability
+
+One of the key features of the Query Builder is its immutability. This ensures that once a query is constructed, it cannot be changed, preventing unintended side-effects:
+
+```ts
+const originalQuery = Query.select('table').orderBy('bar', 'DESC');
+const newQuery = originalQuery.orderBy('foo');
+console.log(originalQuery.toSQL()); // Outputs: SELECT * FROM `table` ORDER BY bar DESC
+console.log(newQuery.toSQL()); // Outputs: SELECT * FROM `table` ORDER BY bar DESC, foo ASC
+```
+
+This design ensures that queries can be safely reused and extended without affecting the original query.
+
+## Advanced Conditions:
+
+Advanced conditions provide more flexibility in filtering data:
+
+- `Conditions.in(...)`: Checks if a column's value is within a set of values.
+- `Conditions.null(...)`: Checks if a column's value is NULL.
+- `Conditions.notNull(...)`: Checks if a column's value is NOT NULL.
+- `Conditions.columnEqual(...)`: Compares two columns for equality.
+
+## Cloning:
+
+If you need to create a copy of a query to make variations without affecting the original, you can use the `clone` method:
+
+```ts
+const clonedQuery = originalQuery.clone();
+```
+
+## Serialization:
+
+For scenarios where you might need to store the query structure or send it across a network, the Query Builder provides serialization methods:
+
+```ts
+const serialized = query.serialize();
+const deserializedQuery = SelectQuery.deserialize(serialized);
+```

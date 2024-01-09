@@ -1,0 +1,33 @@
+{
+  "name": "ts-query",
+  "version": "0.1.0",
+  "description": "TypeScript implementation of SQL builder",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/jakubknejzlik/ts-query.git"
+  },
+  "keywords": [
+    "sql",
+    "query",
+    "builder",
+    "serialization"
+  ],
+  "author": "Jakub Knejzlik",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jakubknejzlik/ts-query/issues"
+  },
+  "homepage": "https://github.com/jakubknejzlik/ts-query#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.10"
+  }
+}
