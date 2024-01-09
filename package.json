@@ -1,10 +1,13 @@
 {
-  "name": "ts-query",
+  "name": "@jakub.knejzlik/ts-query",
   "version": "0.1.0",
   "description": "TypeScript implementation of SQL builder",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "prepublishOnly": "tsc",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
