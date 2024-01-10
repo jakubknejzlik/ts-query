@@ -1,6 +1,7 @@
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from "dayjs";
+import { Condition } from "./Condition";
 
-const formatDayjs = (dayjs: Dayjs) => dayjs.format('YYYY-MM-DD');
+const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 
 export const Function = {
   sum: (column: string) => {
@@ -18,14 +19,20 @@ export const Function = {
   max: (column: string) => {
     return `MAX(${column})`;
   },
+  avg: (column: string) => {
+    return `AVG(${column})`;
+  },
+  abs: (column: string) => {
+    return `ABS(${column})`;
+  },
   dateDiff: (
-    interval: 'year' | 'month' | 'day',
+    interval: "year" | "month" | "day",
     date1: string,
     date2: string
   ) => {
-    if (interval === 'month') {
+    if (interval === "month") {
       return `TIMESTAMPDIFF(MONTH,${date1}, ${date2})`;
-    } else if (interval === 'day') {
+    } else if (interval === "day") {
       return `DATEDIFF(${date1}, ${date2})`;
     } else {
       return `YEAR(${date1}) - YEAR(${date2})`;
@@ -38,7 +45,10 @@ export const Function = {
     return `'${value}'`;
   },
   concat: (...values: string[]) => {
-    return `CONCAT(${values.join(',')})`;
+    return `CONCAT(${values.join(",")})`;
+  },
+  if: (condition: Condition, trueValue: string, falseValue: string) => {
+    return `IF(${condition.toSQL()},${trueValue},${falseValue})`;
   },
   dateRangeSumField: ({
     dateColumn,
@@ -62,12 +72,12 @@ export const Function = {
     thisYearColumn: string;
     lastYearColumn: string;
   }) =>
-    'CASE ' +
+    "CASE " +
     `WHEN ${thisYearColumn} = 0 AND ${lastYearColumn} = 0 THEN 0 ` +
     `WHEN ${lastYearColumn} = 0 THEN null ` +
     `WHEN ${thisYearColumn} = 0 THEN -1 ` +
     `ELSE (${thisYearColumn} - ${lastYearColumn}) / ${lastYearColumn} ` +
-    'END',
+    "END",
 };
 
 export { Function as Fn };

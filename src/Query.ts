@@ -1,7 +1,7 @@
-import { Condition, escapeColumn } from './Condition';
+import { Condition, escapeColumn } from "./Condition";
 
 export enum SQLFlavor {
-  MySQL = 'mysql',
+  MySQL = "mysql",
 }
 
 type TableSource = string | SelectQuery;
@@ -14,15 +14,12 @@ export interface ISerializable {
 }
 
 export class Table implements ISequelizable, ISerializable {
-  constructor(
-    public source: TableSource,
-    public alias?: string
-  ) {}
+  constructor(public source: TableSource, public alias?: string) {}
   public clone(): this {
     return new (this.constructor as any)(this.source, this.alias);
   }
   public getTableName(): string {
-    if (typeof this.source === 'string') {
+    if (typeof this.source === "string") {
       return this.source;
     }
     return this.source.table.getTableName();
@@ -31,20 +28,20 @@ export class Table implements ISequelizable, ISerializable {
     const isSelect = isSelectQuery(this.source);
     const tableName = escapeTable(this.source, flavor);
     let alias = this.alias;
-    if (isSelect && !alias) alias = 't';
-    return `${tableName}${alias ? ` AS ${escapeColumn(alias)}` : ''}`;
+    if (isSelect && !alias) alias = "t";
+    return `${tableName}${alias ? ` AS ${escapeColumn(alias)}` : ""}`;
   }
   toJSON(): any {
     return {
-      type: 'Table',
+      type: "Table",
       source: this.source,
       alias: this.alias,
     };
   }
   static fromJSON(json: any): Table {
     if (
-      typeof json.source === 'object' &&
-      json.source['type'] === 'SelectQuery'
+      typeof json.source === "object" &&
+      json.source["type"] === "SelectQuery"
     ) {
       return new Table(SelectQuery.fromJSON(json.source), json.alias);
     }
@@ -63,7 +60,7 @@ function isSelectQuery(table: TableSource): table is SelectQuery {
 }
 export const escapeTable = (table: TableSource, flavor: SQLFlavor): string => {
   if (isSelectQuery(table)) return `(${table.toSQL(flavor)})`;
-  if (table.indexOf('-') !== -1) {
+  if (table.indexOf("-") !== -1) {
     return `\`${table}\``;
   }
   return escapeColumn(table);
@@ -75,7 +72,7 @@ export class QueryBase implements ISequelizable {
 
   // @ts-ignore
   public get table(): Table {
-    if (this._tables.length === 0) throw new Error('No table defined');
+    if (this._tables.length === 0) throw new Error("No table defined");
     return this._tables[0];
   }
   public get tables(): Table[] {
@@ -97,23 +94,23 @@ export class QueryBase implements ISequelizable {
   join(
     table: Table,
     condition?: Condition,
-    type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL' = 'INNER'
+    type: "INNER" | "LEFT" | "RIGHT" | "FULL" = "INNER"
   ): this {
     const clone = this.clone();
     clone._joins.push(new Join(table, condition, type));
     return clone;
   }
   innerJoin(table: Table, condition: Condition): this {
-    return this.join(table, condition, 'INNER');
+    return this.join(table, condition, "INNER");
   }
   leftJoin(table: Table, condition: Condition): this {
-    return this.join(table, condition, 'LEFT');
+    return this.join(table, condition, "LEFT");
   }
   rightJoin(table: Table, condition: Condition): this {
-    return this.join(table, condition, 'RIGHT');
+    return this.join(table, condition, "RIGHT");
   }
   fullJoin(table: Table, condition: Condition): this {
-    return this.join(table, condition, 'FULL');
+    return this.join(table, condition, "FULL");
   }
 
   public clone(): this {
@@ -125,20 +122,20 @@ export class QueryBase implements ISequelizable {
 
   toSQL(flavor: SQLFlavor): string {
     return this.tables.length > 0
-      ? `FROM ${this.tables.map((table) => table.toSQL(flavor)).join(',')}`
-      : '';
+      ? `FROM ${this.tables.map((table) => table.toSQL(flavor)).join(",")}`
+      : "";
   }
 }
 
 class Join {
-  protected _type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';
+  protected _type: "INNER" | "LEFT" | "RIGHT" | "FULL";
   protected _table: Table;
   protected _condition?: Condition;
 
   constructor(
     table: Table,
     condition?: Condition,
-    type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL' = 'INNER'
+    type: "INNER" | "LEFT" | "RIGHT" | "FULL" = "INNER"
   ) {
     this._table = table;
     this._condition = condition;
@@ -156,13 +153,13 @@ class Join {
 
   toSQL(flavor: SQLFlavor): string {
     return `${this._type} JOIN ${this._table.toSQL(flavor)}${
-      this._condition ? ` ON ${this._condition.toSQL()}` : ''
+      this._condition ? ` ON ${this._condition.toSQL()}` : ""
     }`;
   }
 
   toJSON(): any {
     return {
-      type: 'Join',
+      type: "Join",
       table: this._table.toJSON(),
       condition: this._condition?.toJSON(),
       joinType: this._type,
@@ -190,7 +187,7 @@ interface SelectField {
 
 interface Order {
   field: string;
-  direction: 'ASC' | 'DESC';
+  direction: "ASC" | "DESC";
 }
 
 class SelectBaseQuery extends QueryBase {
@@ -202,8 +199,12 @@ class SelectBaseQuery extends QueryBase {
     return clone;
   }
 
-  // add singleField
+  // @deprecated please use addFields
   field(name: string, alias?: string): this {
+    return this.addFields([{ name, alias }]);
+  }
+  // add singleField
+  addField(name: string, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
   // add multiple fields
@@ -228,17 +229,17 @@ class SelectBaseQuery extends QueryBase {
         ? this._fields
             .map(
               (f) =>
-                `${escapeColumn(f.name)}${f.alias ? ` AS \`${f.alias}\`` : ''}`
+                `${escapeColumn(f.name)}${f.alias ? ` AS \`${f.alias}\`` : ""}`
             )
-            .join(', ')
-        : '*';
+            .join(", ")
+        : "*";
     return `SELECT ${columns} ${super.toSQL(flavor)}`;
   }
 }
 
 export enum UnionType {
-  UNION = 'UNION',
-  UNION_ALL = 'UNION ALL',
+  UNION = "UNION",
+  UNION_ALL = "UNION ALL",
 }
 
 export class SelectQuery extends SelectBaseQuery implements ISerializable {
@@ -306,7 +307,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   public getOrderBy(): Order[] {
     return this._orderBy;
   }
-  orderBy(field: string, direction: 'ASC' | 'DESC' = 'ASC'): this {
+  orderBy(field: string, direction: "ASC" | "DESC" = "ASC"): this {
     const clone = this.clone();
     clone._orderBy.push({ field, direction });
     return clone;
@@ -339,23 +340,23 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     let sql = super.toSQL(flavor);
 
     if (this._joins.length > 0) {
-      sql += ` ${this._joins.map((j) => j.toSQL(flavor)).join(' ')}`;
+      sql += ` ${this._joins.map((j) => j.toSQL(flavor)).join(" ")}`;
     }
     if (this._where.length > 0) {
-      sql += ` WHERE ${this._where.map((w) => w.toSQL()).join(' AND ')}`;
+      sql += ` WHERE ${this._where.map((w) => w.toSQL()).join(" AND ")}`;
     }
     if (this._groupBy.length > 0) {
       sql += ` GROUP BY ${this._groupBy
         .map((c) => escapeColumn(c))
-        .join(', ')}`;
+        .join(", ")}`;
     }
     if (this._having.length > 0) {
-      sql += ` HAVING ${this._having.map((w) => w.toSQL()).join(' AND ')}`;
+      sql += ` HAVING ${this._having.map((w) => w.toSQL()).join(" AND ")}`;
     }
     if (this._orderBy.length > 0) {
       sql += ` ORDER BY ${this._orderBy
         .map((o) => `${escapeColumn(o.field)} ${o.direction}`)
-        .join(', ')}`;
+        .join(", ")}`;
     }
     if (this._limit) {
       sql += ` LIMIT ${this._limit}`;
@@ -383,9 +384,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
   toJSON(): any {
     return {
-      type: 'SelectQuery',
+      type: "SelectQuery",
       tables: this._tables.map((table) =>
-        typeof table === 'string' ? table : table.toJSON()
+        typeof table === "string" ? table : table.toJSON()
       ),
       unionQueries: this._unionQueries.map((u) => ({
         type: u.type,
@@ -430,12 +431,10 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
 
 export const Query = {
   table: (name: string, alias?: string) => new Table(name, alias),
-  tableOutput: (name: string, alias?: string) => new Table('_o_' + name, alias),
-  select: (from?: TableSource, alias?: string) =>
-    from ? new SelectQuery().from(from, alias) : new SelectQuery(),
-  selectOutput: (from: string, alias?: string) =>
-    new SelectQuery().from('_o_' + from, alias),
-  stats: () => new SelectQuery().from('(?)', 't'),
+  select: () => {
+    return new SelectQuery();
+  },
+  stats: () => new SelectQuery().from("(?)", "t"),
   flavors: SQLFlavor,
 };
 
