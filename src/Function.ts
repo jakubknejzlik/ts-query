@@ -44,6 +44,9 @@ export const Function = {
   string: (value: string) => {
     return `'${value}'`;
   },
+  null: () => {
+    return `NULL`;
+  },
   concat: (...values: string[]) => {
     return `CONCAT(${values.join(",")})`;
   },
