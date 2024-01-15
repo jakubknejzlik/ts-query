@@ -1,13 +1,17 @@
 import { Condition, escapeColumn } from "./Condition";
+import { ISQLFlavor } from "./Flavor";
+import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
+import { MySQLFlavor } from "./flavors/mysql";
 
-export enum SQLFlavor {
-  MySQL = "mysql",
-}
+const flavors = {
+  mysql: new MySQLFlavor(),
+  awsTimestream: new AWSTimestreamFlavor(),
+};
 
 type TableSource = string | SelectQuery;
 
 export interface ISequelizable {
-  toSQL(flavor: SQLFlavor): string;
+  toSQL(flavor: ISQLFlavor): string;
 }
 export interface ISerializable {
   serialize(): string;
@@ -25,7 +29,7 @@ export class Table implements ISequelizable, ISerializable {
     return this.source.table.getTableName();
   }
 
-  toSQL(flavor: SQLFlavor): string {
+  toSQL(flavor: ISQLFlavor): string {
     const isSelect = isSelectQuery(this.source);
     const tableName = escapeTable(this.source, flavor);
     let alias = this.alias;
@@ -59,12 +63,12 @@ export class Table implements ISequelizable, ISerializable {
 function isSelectQuery(table: TableSource): table is SelectQuery {
   return table instanceof SelectQuery;
 }
-export const escapeTable = (table: TableSource, flavor: SQLFlavor): string => {
+export const escapeTable = (table: TableSource, flavor: ISQLFlavor): string => {
   if (isSelectQuery(table)) return `(${table.toSQL(flavor)})`;
   if (table.indexOf("-") !== -1) {
     return `\`${table}\``;
   }
-  return escapeColumn(table);
+  return flavor.escapeColumn(table);
 };
 
 export class QueryBase implements ISequelizable {
@@ -128,7 +132,7 @@ export class QueryBase implements ISequelizable {
     return clone;
   }
 
-  toSQL(flavor: SQLFlavor): string {
+  toSQL(flavor: ISQLFlavor): string {
     return this.tables.length > 0
       ? `FROM ${this.tables.map((table) => table.toSQL(flavor)).join(",")}`
       : "";
@@ -163,9 +167,9 @@ class Join {
     return this._table.getTableName();
   }
 
-  toSQL(flavor: SQLFlavor): string {
+  toSQL(flavor: ISQLFlavor): string {
     return `${this._type} JOIN ${this._table.toSQL(flavor)}${
-      this._condition ? ` ON ${this._condition.toSQL()}` : ""
+      this._condition ? ` ON ${this._condition.toSQL(flavor)}` : ""
     }`;
   }
 
@@ -235,7 +239,7 @@ class SelectBaseQuery extends QueryBase {
     return clone;
   }
 
-  toSQL(flavor: SQLFlavor = SQLFlavor.MySQL): string {
+  toSQL(flavor: ISQLFlavor): string {
     const columns =
       this._fields.length > 0
         ? this._fields
@@ -360,14 +364,14 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     );
   }
 
-  toSQL(flavor: SQLFlavor = SQLFlavor.MySQL): string {
+  toSQL(flavor: ISQLFlavor = flavors.mysql): string {
     let sql = super.toSQL(flavor);
 
     if (this._joins.length > 0) {
       sql += ` ${this._joins.map((j) => j.toSQL(flavor)).join(" ")}`;
     }
     if (this._where.length > 0) {
-      sql += ` WHERE ${this._where.map((w) => w.toSQL()).join(" AND ")}`;
+      sql += ` WHERE ${this._where.map((w) => w.toSQL(flavor)).join(" AND ")}`;
     }
     if (this._groupBy.length > 0) {
       sql += ` GROUP BY ${this._groupBy
@@ -375,7 +379,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
         .join(", ")}`;
     }
     if (this._having.length > 0) {
-      sql += ` HAVING ${this._having.map((w) => w.toSQL()).join(" AND ")}`;
+      sql += ` HAVING ${this._having
+        .map((w) => w.toSQL(flavor))
+        .join(" AND ")}`;
     }
     if (this._orderBy.length > 0) {
       sql += ` ORDER BY ${this._orderBy
@@ -460,7 +466,7 @@ export const Query = {
   },
   stats: () => new SelectQuery().from("(?)", "t"),
   deserialize: SelectQuery.deserialize,
-  flavors: SQLFlavor,
+  flavors,
 };
 
 // for shorter syntax

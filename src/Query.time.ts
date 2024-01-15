@@ -1,54 +1,61 @@
 import { Cond } from "./Condition";
-import { Query, SelectQuery, UnionType } from "./Query";
+import { Query, SelectQuery, UnionType, Q } from "./Query";
+
+const flavor = Q.flavors.mysql;
 
 describe("Query builder SQL", () => {
   // Basic Select Queries
   it("should create basic select query", () => {
-    expect(Query.select().from("foo").toSQL()).toEqual("SELECT * FROM `foo`");
-    expect(Query.select().from("table").field("foo").toSQL()).toEqual(
+    expect(Query.select().from("foo").toSQL(flavor)).toEqual(
+      "SELECT * FROM `foo`"
+    );
+    expect(Query.select().from("table").field("foo").toSQL(flavor)).toEqual(
       "SELECT `foo` FROM `table`"
     );
-    expect(Query.select().from("table").field("foo", "blah").toSQL()).toEqual(
-      "SELECT `foo` AS `blah` FROM `table`"
-    );
+    expect(
+      Query.select().from("table").field("foo", "blah").toSQL(flavor)
+    ).toEqual("SELECT `foo` AS `blah` FROM `table`");
   });
 
   // WHERE Conditions
   it("should handle WHERE conditions", () => {
     expect(
-      Query.select().from("table").where(Cond.equal("foo", 123)).toSQL()
+      Query.select().from("table").where(Cond.equal("foo", 123)).toSQL(flavor)
     ).toEqual("SELECT * FROM `table` WHERE `foo` = 123");
     expect(
-      Query.select().from("table").where(Cond.lessThan("bar", "abc")).toSQL()
+      Query.select()
+        .from("table")
+        .where(Cond.lessThan("bar", "abc"))
+        .toSQL(flavor)
     ).toEqual('SELECT * FROM `table` WHERE `bar` < "abc"');
   });
 
   // LIMIT and OFFSET
   it("should handle LIMIT and OFFSET", () => {
-    expect(Query.select().from("table").limit(10).toSQL()).toEqual(
+    expect(Query.select().from("table").limit(10).toSQL(flavor)).toEqual(
       "SELECT * FROM `table` LIMIT 10"
     );
-    expect(Query.select().from("table").offset(5).toSQL()).toEqual(
+    expect(Query.select().from("table").offset(5).toSQL(flavor)).toEqual(
       "SELECT * FROM `table` OFFSET 5"
     );
-    expect(Query.select().from("table").limit(10).offset(5).toSQL()).toEqual(
-      "SELECT * FROM `table` LIMIT 10 OFFSET 5"
-    );
+    expect(
+      Query.select().from("table").limit(10).offset(5).toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` LIMIT 10 OFFSET 5");
   });
 
   // ORDER BY
   it("should handle ORDER BY", () => {
-    expect(Query.select().from("table").orderBy("foo").toSQL()).toEqual(
+    expect(Query.select().from("table").orderBy("foo").toSQL(flavor)).toEqual(
       "SELECT * FROM `table` ORDER BY `foo` ASC"
     );
-    expect(Query.select().from("table").orderBy("foo", "DESC").toSQL()).toEqual(
-      "SELECT * FROM `table` ORDER BY `foo` DESC"
-    );
+    expect(
+      Query.select().from("table").orderBy("foo", "DESC").toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` ORDER BY `foo` DESC");
   });
 
   // GROUP BY
   it("should handle GROUP BY", () => {
-    expect(Query.select().from("table").groupBy("foo").toSQL()).toEqual(
+    expect(Query.select().from("table").groupBy("foo").toSQL(flavor)).toEqual(
       "SELECT * FROM `table` GROUP BY `foo`"
     );
   });
@@ -64,7 +71,7 @@ describe("Query builder SQL", () => {
         .orderBy("bar", "DESC")
         .limit(10)
         .offset(5)
-        .toSQL()
+        .toSQL(flavor)
     ).toEqual(
       "SELECT `foo`, `bar` AS `aliasBar` FROM `table` WHERE `foo` = 123 ORDER BY `bar` DESC LIMIT 10 OFFSET 5"
     );
@@ -81,10 +88,10 @@ describe("Query builder SQL", () => {
     const q2 = q.orderBy("foo");
 
     expect(q === q2).toBeFalsy();
-    expect(q.toSQL()).toEqual(
+    expect(q.toSQL(flavor)).toEqual(
       "SELECT `foo`, `bar` AS `aliasBar` FROM `table` WHERE `foo` = 123 ORDER BY `bar` DESC LIMIT 10 OFFSET 5"
     );
-    expect(q2.toSQL()).toEqual(
+    expect(q2.toSQL(flavor)).toEqual(
       "SELECT `foo`, `bar` AS `aliasBar` FROM `table` WHERE `foo` = 123 ORDER BY `bar` DESC, `foo` ASC LIMIT 10 OFFSET 5"
     );
   });
@@ -98,7 +105,7 @@ describe("Query builder SQL", () => {
           Query.table("otherTable", "T2"),
           Cond.columnEqual("T1.foo", "T2.bar")
         )
-        .toSQL()
+        .toSQL(flavor)
     ).toEqual(
       "SELECT * FROM `table` AS `T1` INNER JOIN `otherTable` AS `T2` ON `T1`.`foo` = `T2`.`bar`"
     );
@@ -111,7 +118,7 @@ describe("Query builder SQL", () => {
           Query.table("otherTable", "aliasOtherTable"),
           Cond.columnEqual("table.foo", "aliasOtherTable.bar")
         )
-        .toSQL()
+        .toSQL(flavor)
     ).toEqual(
       "SELECT * FROM `table` LEFT JOIN `otherTable` AS `aliasOtherTable` ON `table`.`foo` = `aliasOtherTable`.`bar`"
     );
@@ -128,7 +135,7 @@ describe("Query builder SQL", () => {
           Query.table("anotherTable", "AAA"),
           Cond.columnEqual("table.foo", "anotherTable.bar")
         )
-        .toSQL()
+        .toSQL(flavor)
     ).toEqual(
       "SELECT * FROM `table` INNER JOIN `otherTable` AS `T2` ON `table`.`foo` = `otherTable`.`bar` LEFT JOIN `anotherTable` AS `AAA` ON `table`.`foo` = `anotherTable`.`bar`"
     );
@@ -147,7 +154,7 @@ describe("Query builder SQL", () => {
           Query.table("anotherTable", "AAA"),
           Cond.columnEqual("table.foo", "anotherTable.bar")
         )
-        .toSQL()
+        .toSQL(flavor)
     ).toEqual(
       "SELECT * FROM (SELECT * FROM `table`) AS `t` INNER JOIN `otherTable` AS `T2` ON `table`.`foo` = `otherTable`.`bar` LEFT JOIN `anotherTable` AS `AAA` ON `table`.`foo` = `anotherTable`.`bar`"
     );
@@ -159,7 +166,7 @@ describe("Query builder SQL with UNION", () => {
   it("should handle basic UNION", () => {
     const query1 = Query.select().from("table1").field("foo");
     const query2 = Query.select().from("table2").field("bar");
-    expect(query1.union(query2).toSQL()).toEqual(
+    expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT `foo` FROM `table1`) UNION (SELECT `bar` FROM `table2`)"
     );
   });
@@ -168,7 +175,7 @@ describe("Query builder SQL with UNION", () => {
   it("should handle UNION with WHERE conditions", () => {
     const query1 = Query.select().from("table1").where(Cond.equal("foo", 1));
     const query2 = Query.select().from("table2").where(Cond.equal("bar", 2));
-    expect(query1.union(query2).toSQL()).toEqual(
+    expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT * FROM `table1` WHERE `foo` = 1) UNION (SELECT * FROM `table2` WHERE `bar` = 2)"
     );
   });
@@ -177,7 +184,7 @@ describe("Query builder SQL with UNION", () => {
   it("should handle UNION ALL", () => {
     const query1 = Query.select().from("table1").field("foo");
     const query2 = Query.select().from("table2").field("bar");
-    expect(query1.union(query2, UnionType.UNION_ALL).toSQL()).toEqual(
+    expect(query1.union(query2, UnionType.UNION_ALL).toSQL(flavor)).toEqual(
       "(SELECT `foo` FROM `table1`) UNION ALL (SELECT `bar` FROM `table2`)"
     );
   });
@@ -187,7 +194,7 @@ describe("Query builder SQL with UNION", () => {
     const query1 = Query.select().from("table1").field("foo");
     const query2 = Query.select().from("table2").field("bar");
     const query3 = Query.select().from("table3").field("baz");
-    expect(query1.union(query2).union(query3).toSQL()).toEqual(
+    expect(query1.union(query2).union(query3).toSQL(flavor)).toEqual(
       "((SELECT `foo` FROM `table1`) UNION (SELECT `bar` FROM `table2`)) UNION (SELECT `baz` FROM `table3`)"
     );
   });
@@ -206,7 +213,7 @@ describe("Query builder SQL with UNION", () => {
       .where(Cond.equal("bar", 456))
       .orderBy("bar", "ASC")
       .limit(5);
-    expect(query1.union(query2).toSQL()).toEqual(
+    expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT `foo` FROM `table1` WHERE `foo` = 123 ORDER BY `foo` DESC LIMIT 10) UNION (SELECT `bar` FROM `table2` WHERE `bar` = 456 ORDER BY `bar` ASC LIMIT 5)"
     );
   });
@@ -215,7 +222,7 @@ describe("Query builder SQL with UNION", () => {
   it("should handle UNION with table alias", () => {
     const query1 = Query.select().from("table1", "T1").field("T1.foo");
     const query2 = Query.select().from("table2", "T2").field("T2.bar");
-    expect(query1.union(query2).toSQL()).toEqual(
+    expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT `T1`.`foo` FROM `table1` AS `T1`) UNION (SELECT `T2`.`bar` FROM `table2` AS `T2`)"
     );
   });
@@ -227,7 +234,7 @@ describe("Query builder SQL with UNION", () => {
     const q = query1.union(query2);
     const ser = q.serialize();
     const q2 = SelectQuery.deserialize(ser);
-    expect(q.toSQL()).toEqual(q2.toSQL());
+    expect(q.toSQL(flavor)).toEqual(q2.toSQL(flavor));
   });
 });
 
@@ -241,7 +248,7 @@ describe("Query builder Serialization with UNION", () => {
     const serialized = unionQuery.serialize();
     const deserialized = SelectQuery.deserialize(serialized);
 
-    expect(deserialized.toSQL()).toEqual(unionQuery.toSQL());
+    expect(deserialized.toSQL(flavor)).toEqual(unionQuery.toSQL(flavor));
   });
 
   // Serialization of UNION ALL
@@ -253,7 +260,7 @@ describe("Query builder Serialization with UNION", () => {
     const serialized = unionAllQuery.serialize();
     const deserialized = SelectQuery.deserialize(serialized);
 
-    expect(deserialized.toSQL()).toEqual(unionAllQuery.toSQL());
+    expect(deserialized.toSQL(flavor)).toEqual(unionAllQuery.toSQL(flavor));
   });
 
   // Serialization of complex UNION queries
@@ -271,7 +278,7 @@ describe("Query builder Serialization with UNION", () => {
     const serialized = complexUnionQuery.serialize();
     const deserialized = SelectQuery.deserialize(serialized);
 
-    expect(deserialized.toSQL()).toEqual(complexUnionQuery.toSQL());
+    expect(deserialized.toSQL(flavor)).toEqual(complexUnionQuery.toSQL(flavor));
   });
 
   // Serialization of chained UNIONs
@@ -284,6 +291,6 @@ describe("Query builder Serialization with UNION", () => {
     const serialized = chainedUnionQuery.serialize();
     const deserialized = SelectQuery.deserialize(serialized);
 
-    expect(deserialized.toSQL()).toEqual(chainedUnionQuery.toSQL());
+    expect(deserialized.toSQL(flavor)).toEqual(chainedUnionQuery.toSQL(flavor));
   });
 });

@@ -1,7 +1,8 @@
 import dayjs, { Dayjs, isDayjs } from "dayjs";
+import { ISQLFlavor } from "./Flavor";
 
 export interface Condition {
-  toSQL(): string;
+  toSQL(flavor: ISQLFlavor): string;
   toJSON(): any;
 }
 
@@ -34,18 +35,6 @@ type ConditionKey = string;
 export type ConditionValue = string | number | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
-const escapeKey = (key: ConditionKey): string => {
-  return escapeColumn(key);
-};
-const escapeValue = (value: ConditionValue): string => {
-  if (isDayjs(value)) {
-    return `"${value.format("YYYY-MM-DD HH:mm:ss")}"`;
-  }
-  if (typeof value === "string") {
-    return `"${value}"`;
-  }
-  return `${value}`;
-};
 export const escapeColumn = (name: string): string => {
   if (name === "NULL") {
     return name;
@@ -99,8 +88,10 @@ class BinaryCondition implements Condition {
     this.operator = operator;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} ${this.operator} ${escapeValue(this.value)}`;
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} ${
+      this.operator
+    } ${flavor.escapeValue(this.value)}`;
   }
 
   // serialization
@@ -131,9 +122,9 @@ class LogicalCondition implements Condition {
     this.operator = operator;
   }
 
-  toSQL(): string {
+  toSQL(flavor: ISQLFlavor): string {
     return `(${this.conditions
-      .map((c) => c.toSQL())
+      .map((c) => c.toSQL(flavor))
       .join(` ${this.operator} `)})`;
   }
 
@@ -163,10 +154,10 @@ class BetweenCondition implements Condition {
     this.to = to;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} BETWEEN ${escapeValue(
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} BETWEEN ${flavor.escapeValue(
       this.from
-    )} AND ${escapeValue(this.to)}`;
+    )} AND ${flavor.escapeValue(this.to)}`;
   }
 
   // serialization
@@ -197,9 +188,9 @@ class InCondition implements Condition {
     this.values = values;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} IN (${this.values
-      .map(escapeValue)
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} IN (${this.values
+      .map((v) => flavor.escapeValue(v))
       .join(", ")})`;
   }
 
@@ -226,9 +217,9 @@ class NotInCondition implements Condition {
     this.values = values;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} NOT IN (${this.values
-      .map(escapeValue)
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} NOT IN (${this.values
+      .map((v) => flavor.escapeValue(v))
       .join(", ")})`;
   }
 
@@ -255,8 +246,10 @@ class NullCondition implements Condition {
     this.isNull = isNull;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} IS ${this.isNull ? "" : "NOT "}NULL`;
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} IS ${
+      this.isNull ? "" : "NOT "
+    }NULL`;
   }
 
   // serialization
@@ -284,10 +277,10 @@ class LikeCondition implements Condition {
     this.isLike = isLike;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.key)} ${this.isLike ? "" : "NOT "}LIKE \'${
-      this.pattern
-    }\'`;
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.key)} ${
+      this.isLike ? "" : "NOT "
+    }LIKE \'${this.pattern}\'`;
   }
 
   // serialization
@@ -320,10 +313,10 @@ class ColumnComparisonCondition implements Condition {
     this.operator = operator;
   }
 
-  toSQL(): string {
-    return `${escapeKey(this.leftKey)} ${this.operator} ${escapeKey(
-      this.rightKey
-    )}`;
+  toSQL(flavor: ISQLFlavor): string {
+    return `${flavor.escapeColumn(this.leftKey)} ${
+      this.operator
+    } ${flavor.escapeColumn(this.rightKey)}`;
   }
 
   // serialization
