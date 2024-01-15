@@ -24,6 +24,7 @@ export class Table implements ISequelizable, ISerializable {
     }
     return this.source.table.getTableName();
   }
+
   toSQL(flavor: SQLFlavor): string {
     const isSelect = isSelectQuery(this.source);
     const tableName = escapeTable(this.source, flavor);
@@ -88,6 +89,13 @@ export class QueryBase implements ISequelizable {
     return clone;
   }
 
+  public getTableNames(): string[] {
+    return [
+      ...this._tables.map((t) => t.getTableName()),
+      ...this._joins.map((j) => j.getTableName()),
+    ];
+  }
+
   /**
    * join function to join tables with all join types
    */
@@ -149,6 +157,10 @@ class Join {
       this._type
     );
     return clone;
+  }
+
+  public getTableName(): string {
+    return this._table.getTableName();
   }
 
   toSQL(flavor: SQLFlavor): string {
@@ -334,6 +346,18 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     const clone = this.clone();
     clone._unionQueries.push({ query, type });
     return clone;
+  }
+
+  public getTableNames(): string[] {
+    return Array.from(
+      new Set([
+        ...super.getTableNames(),
+        ...this._unionQueries.reduce(
+          (acc, u) => [...acc, ...u.query.getTableNames()],
+          [] as string[]
+        ),
+      ])
+    );
   }
 
   toSQL(flavor: SQLFlavor = SQLFlavor.MySQL): string {
