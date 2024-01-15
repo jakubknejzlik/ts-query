@@ -435,6 +435,7 @@ export const Query = {
     return new SelectQuery();
   },
   stats: () => new SelectQuery().from("(?)", "t"),
+  deserialize: SelectQuery.deserialize,
   flavors: SQLFlavor,
 };
 
