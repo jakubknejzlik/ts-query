@@ -1,7 +1,10 @@
 import dayjs, { Dayjs } from "dayjs";
 import { Condition } from "./Condition";
+import { MySQLFlavor } from "./flavors/mysql";
+import { ISQLFlavor } from "./Flavor";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
+const defaultFlavor = new MySQLFlavor();
 
 export const Function = {
   sum: (column: string) => {
@@ -50,8 +53,13 @@ export const Function = {
   concat: (...values: string[]) => {
     return `CONCAT(${values.join(",")})`;
   },
-  if: (condition: Condition, trueValue: string, falseValue: string) => {
-    return `IF(${condition.toSQL()},${trueValue},${falseValue})`;
+  if: (
+    condition: Condition,
+    trueValue: string,
+    falseValue: string,
+    flavor: ISQLFlavor = defaultFlavor
+  ) => {
+    return `IF(${condition.toSQL(flavor)},${trueValue},${falseValue})`;
   },
   dateRangeSumField: ({
     dateColumn,
