@@ -1,6 +1,6 @@
 {
   "name": "@jakub.knejzlik/ts-query",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "TypeScript implementation of SQL builder",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
