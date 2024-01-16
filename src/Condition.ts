@@ -35,17 +35,6 @@ type ConditionKey = string;
 export type ConditionValue = string | number | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
-export const escapeColumn = (name: string): string => {
-  if (name === "NULL") {
-    return name;
-  }
-  const columnMatch = name.match(/^[\.a-zA-Z0-9_]+$/);
-  if (columnMatch) {
-    return `\`${name.replace(/`/g, "``").split(".").join("`.`")}\``;
-  }
-  return name;
-};
-
 const serializeValue = (value: ConditionValue): string => {
   if (isDayjs(value)) {
     return value.toISOString();

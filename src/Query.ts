@@ -1,4 +1,4 @@
-import { Condition, escapeColumn } from "./Condition";
+import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
@@ -34,7 +34,7 @@ export class Table implements ISequelizable, ISerializable {
     const tableName = escapeTable(this.source, flavor);
     let alias = this.alias;
     if (isSelect && !alias) alias = "t";
-    return `${tableName}${alias ? ` AS ${escapeColumn(alias)}` : ""}`;
+    return `${tableName}${alias ? ` AS ${flavor.escapeColumn(alias)}` : ""}`;
   }
   toJSON(): any {
     return {
@@ -245,7 +245,9 @@ class SelectBaseQuery extends QueryBase {
         ? this._fields
             .map(
               (f) =>
-                `${escapeColumn(f.name)}${f.alias ? ` AS \`${f.alias}\`` : ""}`
+                `${flavor.escapeColumn(f.name)}${
+                  f.alias ? ` AS ${flavor.escapeColumn(f.alias)}` : ""
+                }`
             )
             .join(", ")
         : "*";
@@ -375,7 +377,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     }
     if (this._groupBy.length > 0) {
       sql += ` GROUP BY ${this._groupBy
-        .map((c) => escapeColumn(c))
+        .map((c) => flavor.escapeColumn(c))
         .join(", ")}`;
     }
     if (this._having.length > 0) {
@@ -385,7 +387,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     }
     if (this._orderBy.length > 0) {
       sql += ` ORDER BY ${this._orderBy
-        .map((o) => `${escapeColumn(o.field)} ${o.direction}`)
+        .map((o) => `${flavor.escapeColumn(o.field)} ${o.direction}`)
         .join(", ")}`;
     }
     if (this._limit) {
