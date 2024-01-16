@@ -65,10 +65,7 @@ function isSelectQuery(table: TableSource): table is SelectQuery {
 }
 export const escapeTable = (table: TableSource, flavor: ISQLFlavor): string => {
   if (isSelectQuery(table)) return `(${table.toSQL(flavor)})`;
-  if (table.indexOf("-") !== -1) {
-    return `\`${table}\``;
-  }
-  return flavor.escapeColumn(table);
+  return flavor.escapeTable(table);
 };
 
 export class QueryBase implements ISequelizable {

@@ -24,6 +24,9 @@ export class MySQLFlavor implements ISQLFlavor {
   }
 
   escapeTable(table: string): string {
+    if (table.indexOf("-") !== -1) {
+      return `${this.columnQuotes}${table}${this.columnQuotes}`;
+    }
     return this.escapeColumn(table);
   }
 
