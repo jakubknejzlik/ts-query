@@ -238,7 +238,7 @@ describe("Query builder SQL with UNION", () => {
     const query2 = Query.select().from("table2", "T2").field("T2.bar");
     const q = query1.union(query2);
     const ser = q.serialize();
-    const q2 = SelectQuery.deserialize(ser);
+    const q2 = Q.deserialize(ser);
     expect(q.toSQL(flavor)).toEqual(q2.toSQL(flavor));
   });
 });
@@ -251,7 +251,7 @@ describe("Query builder Serialization with UNION", () => {
     const unionQuery = query1.union(query2);
 
     const serialized = unionQuery.serialize();
-    const deserialized = SelectQuery.deserialize(serialized);
+    const deserialized = Q.deserialize(serialized);
 
     expect(deserialized.toSQL(flavor)).toEqual(unionQuery.toSQL(flavor));
   });
@@ -263,7 +263,7 @@ describe("Query builder Serialization with UNION", () => {
     const unionAllQuery = query1.union(query2, UnionType.UNION_ALL);
 
     const serialized = unionAllQuery.serialize();
-    const deserialized = SelectQuery.deserialize(serialized);
+    const deserialized = Q.deserialize(serialized);
 
     expect(deserialized.toSQL(flavor)).toEqual(unionAllQuery.toSQL(flavor));
   });
@@ -281,7 +281,7 @@ describe("Query builder Serialization with UNION", () => {
     const complexUnionQuery = query1.union(query2);
 
     const serialized = complexUnionQuery.serialize();
-    const deserialized = SelectQuery.deserialize(serialized);
+    const deserialized = Q.deserialize(serialized);
 
     expect(deserialized.toSQL(flavor)).toEqual(complexUnionQuery.toSQL(flavor));
   });
@@ -294,7 +294,7 @@ describe("Query builder Serialization with UNION", () => {
     const chainedUnionQuery = query1.union(query2).union(query3);
 
     const serialized = chainedUnionQuery.serialize();
-    const deserialized = SelectQuery.deserialize(serialized);
+    const deserialized = Q.deserialize(serialized);
 
     expect(deserialized.toSQL(flavor)).toEqual(chainedUnionQuery.toSQL(flavor));
   });
