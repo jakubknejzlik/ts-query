@@ -1,4 +1,5 @@
 import { Cond } from "./Condition";
+import { Fn } from "./Function";
 import { Query, SelectQuery, UnionType, Q } from "./Query";
 
 const flavor = Q.flavors.mysql;
@@ -9,9 +10,13 @@ describe("Query builder SQL", () => {
     expect(Query.select().from("foo").toSQL(flavor)).toEqual(
       "SELECT * FROM `foo`"
     );
-    expect(Query.select().from("table").field("foo").toSQL(flavor)).toEqual(
-      "SELECT `foo` FROM `table`"
-    );
+    expect(
+      Query.select()
+        .from("table")
+        .field("foo")
+        .addField(Fn.max("foo"), "fooMax")
+        .toSQL(flavor)
+    ).toEqual("SELECT `foo`, MAX(foo) AS `fooMax` FROM `table`");
     expect(
       Query.select().from("table").field("foo", "blah").toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah` FROM `table`");

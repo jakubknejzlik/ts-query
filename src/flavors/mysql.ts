@@ -20,7 +20,7 @@ export class MySQLFlavor implements ISQLFlavor {
         .split(".")
         .join("`.`")}${this.columnQuotes}`;
     }
-    return `${this.columnQuotes}${name}${this.columnQuotes}`;
+    return `${name}`;
   }
 
   escapeTable(table: string): string {
