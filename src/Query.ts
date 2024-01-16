@@ -2,6 +2,7 @@ import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
+import { DeleteMutation, UpdateMutation, InsertMutation } from "./Mutation";
 
 const flavors = {
   mysql: new MySQLFlavor(),
@@ -404,13 +405,6 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   serialize(): string {
     return JSON.stringify(this.toJSON());
   }
-  static deserialize(json: string): SelectQuery {
-    try {
-      return SelectQuery.fromJSON(JSON.parse(json));
-    } catch (e) {
-      throw new Error(`Error parsing query: ${(e as Error).message}`);
-    }
-  }
   toJSON(): any {
     return {
       type: "SelectQuery",
@@ -458,13 +452,36 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
 }
 
+const deserialize = (json: string) => {
+  try {
+    const parsed = JSON.parse(json);
+    switch (parsed.type) {
+      case "SelectQuery":
+        return SelectQuery.fromJSON(parsed);
+      case "DeleteMutation":
+        return DeleteMutation.fromJSON(parsed);
+      case "InsertMutation":
+        return InsertMutation.fromJSON(parsed);
+      case "UpdateMutation":
+        return UpdateMutation.fromJSON(parsed);
+      default:
+        throw new Error("Unknown mutation type");
+    }
+  } catch (e) {
+    throw new Error(`Error parsing query: ${(e as Error).message}`);
+  }
+};
+
 export const Query = {
   table: (name: string, alias?: string) => new Table(name, alias),
   select: () => {
     return new SelectQuery();
   },
   stats: () => new SelectQuery().from("(?)", "t"),
-  deserialize: SelectQuery.deserialize,
+  delete: (from: string, alias?: string) => new DeleteMutation(from, alias),
+  update: (table: string, alias?: string) => new UpdateMutation(table, alias),
+  insert: (into: string) => new InsertMutation(into),
+  deserialize,
   flavors,
 };
 
