@@ -10,6 +10,10 @@ export class MutationBase {
     this._table = new Table(table, alias);
   }
 
+  public getTableNames(): string[] {
+    return [this._table.getTableName()];
+  }
+
   public clone(): this {
     const clone = new (this.constructor as any)();
     clone._table = this._table.clone();
