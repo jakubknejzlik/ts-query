@@ -1,4 +1,5 @@
 import { Q } from "./Query";
+import { Fn } from "./Function";
 
 describe("Query builder metadata", () => {
   it("should return list of tables in simple query", () => {
@@ -29,6 +30,28 @@ describe("Query builder metadata", () => {
   });
   it("should return empty list of tables", () => {
     const query = Q.select();
+    const tables = query.getTableNames();
+    expect(tables).toEqual([]);
+  });
+  it("should get empty table names form union", () => {
+    const query = Q.select()
+      .addField(Fn.string("label"), "label")
+      .addField(Fn.string("0"), "value")
+      .union(
+        Q.select()
+          .addField("label")
+          .addField("val", "value")
+          .from(
+            Q.select()
+              .addField(Fn.string("label"), "label")
+              .union(
+                Q.select()
+                  .removeGroupBy()
+                  .addField(Fn.string("label3"), "label")
+              )
+              .union(Q.select().addField(Fn.string("label"), "label"))
+          )
+      );
     const tables = query.getTableNames();
     expect(tables).toEqual([]);
   });

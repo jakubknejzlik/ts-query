@@ -23,11 +23,11 @@ export class Table implements ISequelizable, ISerializable {
   public clone(): this {
     return new (this.constructor as any)(this.source, this.alias);
   }
-  public getTableName(): string {
+  public getTableName(): string | undefined {
     if (typeof this.source === "string") {
       return this.source;
     }
-    return this.source.table.getTableName();
+    return this.source.table?.getTableName();
   }
 
   toSQL(flavor: ISQLFlavor): string {
@@ -93,8 +93,8 @@ export class QueryBase implements ISequelizable {
 
   public getTableNames(): string[] {
     return [
-      ...this._tables.map((t) => t.getTableName()),
-      ...this._joins.map((j) => j.getTableName()),
+      ...this._tables.map((t) => t.getTableName()).filter((x) => x),
+      ...this._joins.map((j) => j.getTableName()).filter((x) => x),
     ];
   }
 
