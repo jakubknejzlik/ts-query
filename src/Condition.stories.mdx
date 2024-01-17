@@ -1,5 +1,5 @@
-import { Meta } from '@storybook/addon-docs';
-import { QueryPreview } from './QueryPreview';
+import { Meta } from "@storybook/addon-docs";
+import { QueryPreview } from "./QueryPreview";
 
 <Meta title="2. Conditions" />
 
@@ -13,7 +13,7 @@ To start building a condition, use the `Conditions` object:
 
 <QueryPreview
   code={`
-Conditions.equal('columnName', 'foo');
+Cond.equal('columnName', 'foo');
 `}
 />
 
@@ -25,7 +25,7 @@ To check if a column is equal to a value:
 
 <QueryPreview
   code={`
-Conditions.equal('foo', 123);
+Cond.equal('foo', 123);
 `}
 />
 
@@ -35,7 +35,7 @@ To check if a column is not equal to a value:
 
 <QueryPreview
   code={`
-Conditions.notEqual('foo', '123');
+Cond.notEqual('foo', '123');
 `}
 />
 
@@ -45,7 +45,7 @@ To check if a column's value is greater than a given value:
 
 <QueryPreview
   code={`
-Conditions.greaterThan('foo', 123);
+Cond.greaterThan('foo', 123);
 `}
 />
 
@@ -55,7 +55,7 @@ To check if a column's value is less than a given value:
 
 <QueryPreview
   code={`
-Conditions.lessThan('foo', '123');
+Cond.lessThan('foo', '123');
 `}
 />
 
@@ -65,7 +65,7 @@ To check if a column's value is greater than or equal to a given value:
 
 <QueryPreview
   code={`
-Conditions.greaterThanOrEqual('foo', 123);
+Cond.greaterThanOrEqual('foo', 123);
 `}
 />
 
@@ -75,7 +75,7 @@ To check if a column's value is less than or equal to a given value:
 
 <QueryPreview
   code={`
-Conditions.lessThanOrEqual('foo', '123');
+Cond.lessThanOrEqual('foo', '123');
 `}
 />
 
@@ -85,7 +85,7 @@ To check if a column's value is between two values:
 
 <QueryPreview
   code={`
-Conditions.between('foo', [1, 2]);
+Cond.between('foo', [1, 2]);
 `}
 />
 
@@ -95,7 +95,7 @@ To check if a column's value is within a set of values:
 
 <QueryPreview
   code={`
-Conditions.in('foo', [1, 2, 3]);
+Cond.in('foo', [1, 2, 3]);
 `}
 />
 
@@ -105,9 +105,9 @@ To combine multiple conditions with an AND operator:
 
 <QueryPreview
   code={`
-Conditions.and([
-  Conditions.equal('foo', 123),
-  Conditions.greaterThan('bar', 50),
+Cond.and([
+  Cond.equal('foo', 123),
+  Cond.greaterThan('bar', 50),
 ]);
 `}
 />
@@ -118,7 +118,7 @@ To combine multiple conditions with an OR operator:
 
 <QueryPreview
   code={`
-Conditions.or([Conditions.equal('foo', 123), Conditions.lessThan('bar', 50)]);
+Cond.or([Cond.equal('foo', 123), Cond.lessThan('bar', 50)]);
 `}
 />
 
@@ -128,11 +128,11 @@ To combine various AND/OR conditions together:
 
 <QueryPreview
   code={`
-Conditions.and([
-      Conditions.between('price', [10, 50]),
-      Conditions.or([
-        Conditions.like('name', '%apple%'),
-        Conditions.notLike('description', '%refurbished%'),
+Cond.and([
+      Cond.between('price', [10, 50]),
+      Cond.or([
+        Cond.like('name', '%apple%'),
+        Cond.notLike('description', '%refurbished%'),
       ]),
     ])
 `}
@@ -144,7 +144,7 @@ To check if a column's value is NULL:
 
 <QueryPreview
   code={`
-Conditions.null('foo');
+Cond.null('foo');
 `}
 />
 
@@ -154,7 +154,7 @@ To check if a column's value is NOT NULL:
 
 <QueryPreview
   code={`
-Conditions.notNull('foo');
+Cond.notNull('foo');
 `}
 />
 
@@ -164,7 +164,7 @@ To check if a column's value matches a pattern:
 
 <QueryPreview
   code={`
-Conditions.like('foo', 'He_lo wor%');
+Cond.like('foo', 'He_lo wor%');
 `}
 />
 
@@ -174,7 +174,7 @@ To check if a column's value does not match a pattern:
 
 <QueryPreview
   code={`
-Conditions.notLike('foo', 'He_lo wor%');
+Cond.notLike('foo', 'He_lo wor%');
 `}
 />
 
