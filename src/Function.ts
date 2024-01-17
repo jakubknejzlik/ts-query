@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from "dayjs";
 import { Condition } from "./Condition";
-import { MySQLFlavor } from "./flavors/mysql";
 import { ISQLFlavor } from "./Flavor";
+import { MySQLFlavor } from "./flavors/mysql";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 const defaultFlavor = new MySQLFlavor();
@@ -49,6 +49,9 @@ export const Function = {
   },
   null: () => {
     return `NULL`;
+  },
+  ifnull: (name: string, value: string) => {
+    return `IFNULL(${name},${value})`;
   },
   concat: (...values: string[]) => {
     return `CONCAT(${values.join(",")})`;
