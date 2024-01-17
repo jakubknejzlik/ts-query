@@ -1,9 +1,9 @@
-import { Conditions } from "./Condition";
+import { Cond } from "./Condition";
 import { Q } from "./Query";
 
 describe("Mutation builder SQL", () => {
   it("should return SQL for delete", () => {
-    expect(Q.delete("users").where(Conditions.equal("id", 1)).toSQL()).toEqual(
+    expect(Q.delete("users").where(Cond.equal("id", 1)).toSQL()).toEqual(
       "DELETE FROM `users` WHERE `id` = 1"
     );
   });
