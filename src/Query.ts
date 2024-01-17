@@ -74,8 +74,8 @@ export class QueryBase implements ISequelizable {
   protected _joins: Join[] = [];
 
   // @ts-ignore
-  public get table(): Table {
-    if (this._tables.length === 0) throw new Error("No table defined");
+  public get table(): Table | undefined {
+    if (this._tables.length === 0) return undefined;
     return this._tables[0];
   }
   public get tables(): Table[] {

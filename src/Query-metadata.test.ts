@@ -27,4 +27,9 @@ describe("Query builder metadata", () => {
     const tables = query.getTableNames();
     expect(tables).toEqual(["table", "table2", "table3", "table4"]);
   });
+  it("should return empty list of tables", () => {
+    const query = Q.select();
+    const tables = query.getTableNames();
+    expect(tables).toEqual([]);
+  });
 });
