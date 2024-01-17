@@ -2,7 +2,7 @@
 import { themes } from "prism-react-renderer";
 import React, { useState } from "react";
 import { LiveEditor, LiveError, LivePreview, LiveProvider } from "react-live";
-import * as components from "./index";
+import * as components from "../index";
 
 interface QueryPreviewProps {
   code: string;
