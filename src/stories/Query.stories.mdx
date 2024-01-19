@@ -1,5 +1,5 @@
-import { Meta } from '@storybook/addon-docs';
-import { QueryPreview } from './QueryPreview';
+import { Meta } from "@storybook/addon-docs";
+import { QueryPreview } from "./QueryPreview";
 
 <Meta title="1. Query" />
 
@@ -75,7 +75,7 @@ Q.select()
   .from('users')
   .join(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
 />
@@ -92,7 +92,7 @@ Q.select()
   .from('users')
   .innerJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
 />
@@ -105,7 +105,7 @@ Q.select()
   .from('users')
   .leftJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
 />
@@ -118,7 +118,7 @@ Q.select()
   .from('users')
   .rightJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
 />
@@ -131,7 +131,7 @@ Q.select()
   .from('users')
   .fullJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
 />
@@ -144,7 +144,7 @@ For example, joining users and orders on user ID:
 
 <QueryPreview
   code={`
-Conditions.columnEqual('users.id', 'o.user_id');
+Cond.columnEqual('users.id', 'o.user_id');
 `}
 />
 
@@ -158,11 +158,11 @@ Q.select()
   .from('users')
   .innerJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('users.id', 'o.user_id')
+    Cond.columnEqual('users.id', 'o.user_id')
   )
   .leftJoin(
     Query.table('products', 'p'),
-    Conditions.columnEqual('o.product_id', 'p.id')
+    Cond.columnEqual('o.product_id', 'p.id')
   );
 `}
 />
@@ -177,7 +177,7 @@ Q.select()
   .from('users', 'u')
   .leftJoin(
     Query.table('orders', 'o'),
-    Conditions.columnEqual('u.id', 'o.user_id')
+    Cond.columnEqual('u.id', 'o.user_id')
   );
 `}
 />
@@ -190,9 +190,9 @@ Join conditions can be more complex, involving logical operators like AND, OR:
   code={`
 Q.select()
 .from('users')
-.innerJoin(Query.table('orders', 'o'), Conditions.and([
-  Conditions.columnEqual('users.id', 'o.user_id'),
-  Conditions.greaterThan('orders.amount', 100),
+.innerJoin(Query.table('orders', 'o'), Cond.and([
+  Cond.columnEqual('users.id', 'o.user_id'),
+  Cond.greaterThan('orders.amount', 100),
 ]));
 `}
 />
@@ -203,7 +203,7 @@ Filtering the data you retrieve is a common operation. The `where` method allows
 
 <QueryPreview
   code={`
-Q.select().from('table').where(Conditions.equal('fieldName', 'foo')).where(Conditions.lessThan('fieldName2', 123));
+Q.select().from('table').where(Cond.equal('fieldName', 'foo')).where(Cond.lessThan('fieldName2', 123));
 `}
 />
 
@@ -275,7 +275,7 @@ For more advanced queries, you might need to use subqueries as a table source:
 
 <QueryPreview
   code={`
-Q.select().from(Q.select().from('table').where(Conditions.equal('field', value)),'subt');
+Q.select().from(Q.select().from('table').where(Cond.equal('field', 'blah')),'subt');
 `}
 />
 
@@ -302,11 +302,11 @@ Q.select()
   .addField('id')
   .addField('name')
   .where(
-    Conditions.and([
-      Conditions.equal('age', 25),
-      Conditions.or([
-        Conditions.greaterThan('salary', 50000),
-        Conditions.like('position', 'manager%'),
+    Cond.and([
+      Cond.equal('age', 25),
+      Cond.or([
+        Cond.greaterThan('salary', 50000),
+        Cond.like('position', 'manager%'),
       ]),
     ])
   )
@@ -325,11 +325,11 @@ Queries can also have nested conditions for more intricate filtering:
 Q.select()
   .from('products')
   .where(
-    Conditions.and([
-      Conditions.between('price', [10, 50]),
-      Conditions.or([
-        Conditions.like('name', '%apple%'),
-        Conditions.notLike('description', '%refurbished%'),
+    Cond.and([
+      Cond.between('price', [10, 50]),
+      Cond.or([
+        Cond.like('name', '%apple%'),
+        Cond.notLike('description', '%refurbished%'),
       ]),
     ])
   );
@@ -341,8 +341,8 @@ Q.select()
 One of the key features of the Query Builder is its immutability. This ensures that once a query is constructed, it cannot be changed, preventing unintended side-effects:
 
 ```tsx
-Q.select().from('table').orderBy('bar', 'DESC');
-const newQuery = originalQuery.orderBy('foo');
+Q.select().from("table").orderBy("bar", "DESC");
+const newQuery = originalQuery.orderBy("foo");
 ```
 
 This design ensures that queries can be safely reused and extended without affecting the original query.
@@ -351,10 +351,10 @@ This design ensures that queries can be safely reused and extended without affec
 
 Advanced conditions provide more flexibility in filtering data:
 
-- `Conditions.in(...)`: Checks if a column's value is within a set of values.
-- `Conditions.null(...)`: Checks if a column's value is NULL.
-- `Conditions.notNull(...)`: Checks if a column's value is NOT NULL.
-- `Conditions.columnEqual(...)`: Compares two columns for equality.
+- `Cond.in(...)`: Checks if a column's value is within a set of values.
+- `Cond.null(...)`: Checks if a column's value is NULL.
+- `Cond.notNull(...)`: Checks if a column's value is NOT NULL.
+- `Cond.columnEqual(...)`: Compares two columns for equality.
 
 ## Cloning:
 
