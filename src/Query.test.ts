@@ -16,7 +16,7 @@ describe("Query builder SQL", () => {
         .field("foo")
         .addField(Fn.max("foo"), "fooMax")
         .toSQL(flavor)
-    ).toEqual("SELECT `foo`, MAX(foo) AS `fooMax` FROM `table`");
+    ).toEqual("SELECT `foo`, MAX(`foo`) AS `fooMax` FROM `table`");
     expect(
       Query.select().from("table").field("foo", "blah").toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah` FROM `table`");

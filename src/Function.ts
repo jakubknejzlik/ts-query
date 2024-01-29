@@ -2,67 +2,93 @@ import dayjs, { Dayjs } from "dayjs";
 import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import { MySQLFlavor } from "./flavors/mysql";
+import { Expression, ExpressionOrString } from "./Expression";
+import { Q } from "./Query";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 const defaultFlavor = new MySQLFlavor();
 
 export const Function = {
-  sum: (column: string) => {
-    return `SUM(${column})`;
+  sum: (column: ExpressionOrString) => {
+    return Q.expr(`SUM(${Expression.fromColumnOrExpression(column)})`);
   },
-  year: (column: string) => {
-    return `YEAR(${column})`;
+  year: (column: ExpressionOrString) => {
+    return Q.expr(`YEAR(${Expression.fromColumnOrExpression(column)})`);
   },
-  month: (column: string) => {
-    return `MONTH(${column})`;
+  month: (column: ExpressionOrString) => {
+    return Q.expr(`MONTH(${Expression.fromColumnOrExpression(column)})`);
   },
-  min: (column: string) => {
-    return `MIN(${column})`;
+  min: (column: ExpressionOrString) => {
+    return Q.expr(`MIN(${Expression.fromColumnOrExpression(column)})`);
   },
-  max: (column: string) => {
-    return `MAX(${column})`;
+  max: (column: ExpressionOrString) => {
+    return Q.expr(`MAX(${Expression.fromColumnOrExpression(column)})`);
   },
-  avg: (column: string) => {
-    return `AVG(${column})`;
+  avg: (column: ExpressionOrString) => {
+    return Q.expr(`AVG(${Expression.fromColumnOrExpression(column)})`);
   },
-  abs: (column: string) => {
-    return `ABS(${column})`;
+  abs: (column: ExpressionOrString) => {
+    return Q.expr(`ABS(${Expression.fromColumnOrExpression(column)})`);
   },
   dateDiff: (
     interval: "year" | "month" | "day",
-    date1: string,
-    date2: string
+    date1: ExpressionOrString,
+    date2: ExpressionOrString
   ) => {
     if (interval === "month") {
-      return `TIMESTAMPDIFF(MONTH,${date1}, ${date2})`;
+      return Q.expr(
+        `TIMESTAMPDIFF(MONTH,${Expression.fromColumnOrExpression(
+          date1
+        )}, ${Expression.fromColumnOrExpression(date2)})`
+      );
     } else if (interval === "day") {
-      return `DATEDIFF(${date1}, ${date2})`;
+      return Q.expr(
+        `DATEDIFF(${Expression.fromColumnOrExpression(
+          date1
+        )}, ${Expression.fromColumnOrExpression(date2)})`
+      );
     } else {
-      return `YEAR(${date1}) - YEAR(${date2})`;
+      return Q.expr(
+        `YEAR(${Expression.fromColumnOrExpression(
+          date1
+        )}) - YEAR(${Expression.fromColumnOrExpression(date2)})`
+      );
     }
   },
   formatDate: (date: Dayjs) => {
-    return `'${formatDayjs(date)}'`;
+    return Q.expr(`'${formatDayjs(date)}'`);
   },
   string: (value: string) => {
-    return `'${value}'`;
+    return Q.expr(Expression.escapeString(`${value}`));
   },
   null: () => {
-    return `NULL`;
+    return Q.expr(`NULL`);
   },
-  ifnull: (name: string, value: string) => {
-    return `IFNULL(${name},${value})`;
+  ifnull: (name: ExpressionOrString, value: ExpressionOrString) => {
+    return Q.expr(
+      `IFNULL(${Expression.fromColumnOrExpression(name)},${
+        typeof value === "string"
+          ? value
+          : Expression.fromColumnOrExpression(value)
+      })`
+    );
   },
-  concat: (...values: string[]) => {
-    return `CONCAT(${values.join(",")})`;
+  concat: (...values: ExpressionOrString[]) => {
+    return Q.expr(
+      `CONCAT(${values
+        .map((x) => Expression.fromColumnOrExpression(x))
+        .join(",")})`
+    );
   },
   if: (
     condition: Condition,
-    trueValue: string,
-    falseValue: string,
+    trueValue: ExpressionOrString,
+    falseValue: ExpressionOrString,
     flavor: ISQLFlavor = defaultFlavor
   ) => {
-    return `IF(${condition.toSQL(flavor)},${trueValue},${falseValue})`;
+    return `IF(${condition.toSQL(flavor)},${Expression.fromColumnOrExpression(
+      trueValue
+    )},${Expression.fromColumnOrExpression(falseValue)})`;
   },
   dateRangeSumField: ({
     dateColumn,
@@ -83,15 +109,29 @@ export const Function = {
     thisYearColumn,
     lastYearColumn,
   }: {
-    thisYearColumn: string;
-    lastYearColumn: string;
+    thisYearColumn: ExpressionOrString;
+    lastYearColumn: ExpressionOrString;
   }) =>
-    "CASE " +
-    `WHEN ${thisYearColumn} = 0 AND ${lastYearColumn} = 0 THEN 0 ` +
-    `WHEN ${lastYearColumn} = 0 THEN null ` +
-    `WHEN ${thisYearColumn} = 0 THEN -1 ` +
-    `ELSE (${thisYearColumn} - ${lastYearColumn}) / ${lastYearColumn} ` +
-    "END",
+    Q.expr(
+      "CASE " +
+        `WHEN ${Expression.fromColumnOrExpression(
+          thisYearColumn
+        )} = 0 AND ${Expression.fromColumnOrExpression(
+          lastYearColumn
+        )} = 0 THEN 0 ` +
+        `WHEN ${Expression.fromColumnOrExpression(
+          lastYearColumn
+        )} = 0 THEN null ` +
+        `WHEN ${Expression.fromColumnOrExpression(
+          thisYearColumn
+        )} = 0 THEN -1 ` +
+        `ELSE (${Expression.fromColumnOrExpression(
+          thisYearColumn
+        )} - ${Expression.fromColumnOrExpression(
+          lastYearColumn
+        )}) / ${Expression.fromColumnOrExpression(lastYearColumn)} ` +
+        "END"
+    ),
 };
 
 export { Function as Fn };

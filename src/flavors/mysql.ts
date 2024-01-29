@@ -6,21 +6,26 @@ export class MySQLFlavor implements ISQLFlavor {
   protected columnQuotes = "`";
   protected stringQuotes = `"`;
 
-  escapeColumn(name: string): string {
+  escapeColumn(name: string, legacyParsing?: boolean): string {
     if (name === "NULL") {
       return name;
     }
-    const columnMatch = name.match(/^[\.a-zA-Z0-9_\sěščřžýáíé]+$/);
-    if (columnMatch) {
-      return `${this.columnQuotes}${name
-        .replace(
-          new RegExp(`/${this.columnQuotes}/`, "g"),
-          `${this.columnQuotes}${this.columnQuotes}`
-        )
-        .split(".")
-        .join("`.`")}${this.columnQuotes}`;
+    if (legacyParsing) {
+      const columnMatch = name.match(/^[\.a-zA-Z0-9_]+$/);
+      if (columnMatch) {
+        return `${this.columnQuotes}${name
+          .replace(
+            new RegExp(`/${this.columnQuotes}/`, "g"),
+            `${this.columnQuotes}${this.columnQuotes}`
+          )
+          .split(".")
+          .join("`.`")}${this.columnQuotes}`;
+      }
+      return `${name}`;
     }
-    return `${name}`;
+    return `${this.columnQuotes}${name.split(".").join("`.`")}${
+      this.columnQuotes
+    }`;
   }
 
   escapeTable(table: string): string {

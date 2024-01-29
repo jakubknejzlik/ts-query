@@ -1,0 +1,30 @@
+import { Expression } from "./Expression";
+import { Q } from "./Query";
+
+const flavor = Q.flavors.mysql;
+
+describe("Expression", () => {
+  it("should handle escaping columns", () => {
+    expect(Q.expr(Expression.escapeColumn("foo")).toSQL(flavor)).toEqual(
+      "`foo`"
+    );
+    expect(Q.expr(Expression.escapeColumn("123")).toSQL(flavor)).toEqual(
+      "`123`"
+    );
+    expect(
+      Q.expr(Expression.escapeColumn("aaa.ěščřžýáíé1%_-!")).toSQL(flavor)
+    ).toEqual("`aaa`.`ěščřžýáíé1%_-!`");
+  });
+  it("should handle escaping columns in functions", () => {
+    expect(
+      Q.expr(`MAX(${Expression.escapeColumn("foo")})`).toSQL(flavor)
+    ).toEqual("MAX(`foo`)");
+    expect(
+      Q.expr(
+        `IF(${Expression.escapeColumn("123")} > 123,${Expression.escapeColumn(
+          "123"
+        )},FALSE)`
+      ).toSQL(flavor)
+    ).toEqual("IF(`123` > 123,`123`,FALSE)");
+  });
+});

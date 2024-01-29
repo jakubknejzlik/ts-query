@@ -1,8 +1,10 @@
 import { Condition } from "./Condition";
+import { Expression, ExpressionOrString } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
-import { DeleteMutation, UpdateMutation, InsertMutation } from "./Mutation";
+import { Fn } from "./Function";
+import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 
 const flavors = {
   mysql: new MySQLFlavor(),
@@ -195,7 +197,7 @@ class Join {
 }
 
 interface SelectField {
-  name: string;
+  name: ExpressionOrString;
   alias?: string;
 }
 
@@ -214,17 +216,22 @@ class SelectBaseQuery extends QueryBase {
   }
 
   // @deprecated please use addFields
-  field(name: string, alias?: string): this {
+  field(name: ExpressionOrString, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
   // add singleField
-  addField(name: string, alias?: string): this {
+  addField(name: ExpressionOrString, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
   // add multiple fields
   addFields(fields: SelectField[]): this {
     const clone = this.clone();
-    clone._fields.push(...fields);
+    clone._fields.push(
+      ...fields.map((f) => ({
+        name: Expression.deserialize(f.name),
+        alias: f.alias,
+      }))
+    );
     return clone;
   }
   removeFields(): this {
@@ -233,7 +240,8 @@ class SelectBaseQuery extends QueryBase {
   // reset fields
   fields(fields: SelectField[]): this {
     const clone = this.clone();
-    clone._fields = [...fields];
+    clone._fields = [];
+    clone.addFields(fields);
     return clone;
   }
 
@@ -243,7 +251,7 @@ class SelectBaseQuery extends QueryBase {
         ? this._fields
             .map(
               (f) =>
-                `${flavor.escapeColumn(f.name)}${
+                `${Expression.deserialize(f.name).toSQL(flavor)}${
                   f.alias ? ` AS ${flavor.escapeColumn(f.alias)}` : ""
                 }`
             )
@@ -416,7 +424,10 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
         query: u.query.toJSON(),
       })),
       joins: this._joins.map((join) => join.toJSON()),
-      fields: this._fields,
+      fields: this._fields.map((f) => ({
+        name: Expression.deserialize(f.name).serialize(),
+        alias: f.alias,
+      })),
       where: this._where.map((condition) => condition.toJSON()),
       having: this._having.map((condition) => condition.toJSON()),
       limit: this._limit,
@@ -437,7 +448,10 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     query._joins = (json.joins || []).map((joinJson: any) =>
       Join.fromJSON(joinJson)
     );
-    query._fields = json.fields;
+    query._fields = json.fields.map((field: any) => ({
+      name: Expression.deserialize(field.name),
+      alias: field.alias,
+    }));
     query._where = (json.where || []).map((conditionJson: any) =>
       Condition.fromJSON(conditionJson)
     );
@@ -483,6 +497,10 @@ export const Query = {
   insert: (into: string) => new InsertMutation(into),
   deserialize,
   flavors,
+  expr: Expression.deserialize,
+  S: (literals: string | readonly string[]) => {
+    return Fn.string(`${literals}`);
+  },
 };
 
 // for shorter syntax
