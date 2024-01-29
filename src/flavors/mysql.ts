@@ -10,7 +10,7 @@ export class MySQLFlavor implements ISQLFlavor {
     if (name === "NULL") {
       return name;
     }
-    const columnMatch = name.match(/^[\.a-zA-Z0-9_]+$/);
+    const columnMatch = name.match(/^[\.a-zA-Z0-9_\sěščřžýáíé]+$/);
     if (columnMatch) {
       return `${this.columnQuotes}${name
         .replace(

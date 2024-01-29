@@ -111,6 +111,12 @@ describe("Condition", () => {
       "`foo` NOT LIKE 'He_lo wor%'"
     );
   });
+
+  it("should handle special characters", () => {
+    expect(Cond.equal("ěščřžýáíé aaa_", 123).toSQL(flavor)).toEqual(
+      "`ěščřžýáíé aaa_` = 123"
+    );
+  });
 });
 
 describe("Conditions.fromString", () => {
