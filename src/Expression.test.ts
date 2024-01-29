@@ -28,3 +28,20 @@ describe("Expression", () => {
     ).toEqual("IF(`123` > 123,`123`,FALSE)");
   });
 });
+
+describe("Expression serialization", () => {
+  it("should serialize/deserialize expressions", () => {
+    const a = Q.expr("foo").serialize();
+    expect(Expression.deserialize(a).toSQL(flavor)).toEqual(
+      Q.expr("foo").toSQL(flavor)
+    );
+
+    expect(Q.expr(Expression.escapeColumn("foo")).toSQL(flavor)).toEqual(
+      Expression.deserialize(Expression.escapeColumn("foo")).toSQL(flavor)
+    );
+
+    expect(Q.expr(Expression.escapeString("blah")).toSQL(flavor)).toEqual(
+      Expression.deserialize(Expression.escapeString("blah")).toSQL(flavor)
+    );
+  });
+});
