@@ -1,5 +1,7 @@
-import dayjs, { Dayjs, isDayjs } from "dayjs";
+import { Dayjs } from "dayjs";
+import { Expression, ExpressionValue, ValueExpression } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
+import { Q } from "./Query";
 
 export interface Condition {
   toSQL(flavor: ISQLFlavor): string;
@@ -31,72 +33,44 @@ export namespace Condition {
   }
 }
 
-type ConditionKey = string;
 export type ConditionValue = string | number | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
-const serializeValue = (value: ConditionValue): string => {
-  if (isDayjs(value)) {
-    return value.toISOString();
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  return `${value}`;
-};
-
-const deserializeValue = (value: string): ConditionValue => {
-  if (value === "null") {
-    return null;
-  }
-  if (value === "true") {
-    return true;
-  }
-  if (value === "false") {
-    return false;
-  }
-  const numberValue = Number(value);
-  if (!isNaN(numberValue)) {
-    return numberValue;
-  }
-  const dateValue = dayjs(value, "YYYY-MM-DDTHH:mm:ss.SSSZ", true);
-  if (dateValue.isValid()) {
-    return dateValue;
-  }
-  return value;
-};
-
 class BinaryCondition implements Condition {
-  key: ConditionKey;
-  value: ConditionValue;
+  key: Expression;
+  value: Expression;
   operator: Operator;
 
-  constructor(key: ConditionKey, value: ConditionValue, operator: Operator) {
-    this.key = key;
-    this.value = value;
+  constructor(
+    key: ExpressionValue,
+    value: ExpressionValue,
+    operator: Operator
+  ) {
+    this.key = Q.expr(key);
+    this.value = Q.exprValue(value);
     this.operator = operator;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} ${
-      this.operator
-    } ${flavor.escapeValue(this.value)}`;
+    return `${this.key.toSQL(flavor)} ${this.operator} ${this.value.toSQL(
+      flavor
+    )}`;
   }
 
   // serialization
   toJSON(): any {
     return {
       type: "BinaryCondition",
-      key: this.key,
-      value: serializeValue(this.value),
+      key: this.key.serialize(),
+      value: this.value.serialize(),
       operator: this.operator,
     };
   }
 
   static fromJSON(json: any): BinaryCondition {
     return new BinaryCondition(
-      json.key,
-      deserializeValue(json.value),
+      Expression.deserialize(json.key),
+      Expression.deserializeValue(json.value),
       json.operator
     );
   }
@@ -133,53 +107,57 @@ class LogicalCondition implements Condition {
 }
 
 class BetweenCondition implements Condition {
-  key: ConditionKey;
-  from: ConditionValue;
-  to: ConditionValue;
+  key: Expression;
+  from: Expression;
+  to: Expression;
 
-  constructor(key: ConditionKey, from: ConditionValue, to: ConditionValue) {
-    this.key = key;
-    this.from = from;
-    this.to = to;
+  constructor(
+    key: ExpressionValue,
+    from: ExpressionValue,
+    to: ExpressionValue
+  ) {
+    this.key = Q.expr(key);
+    this.from = Q.expr(from);
+    this.to = Q.expr(to);
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} BETWEEN ${flavor.escapeValue(
-      this.from
-    )} AND ${flavor.escapeValue(this.to)}`;
+    return `${this.key.toSQL(flavor)} BETWEEN ${this.from.toSQL(
+      flavor
+    )} AND ${this.to.toSQL(flavor)}`;
   }
 
   // serialization
   toJSON(): any {
     return {
       type: "BetweenCondition",
-      key: this.key,
-      from: serializeValue(this.from),
-      to: serializeValue(this.to),
+      key: this.key.serialize(),
+      from: this.from.serialize(),
+      to: this.to.serialize(),
     };
   }
 
   static fromJSON(json: any): BetweenCondition {
     return new BetweenCondition(
-      json.key,
-      deserializeValue(json.from),
-      deserializeValue(json.to)
+      Expression.deserialize(json.key),
+      Expression.deserialize(json.from),
+      Expression.deserialize(json.to)
     );
   }
 }
 
 class InCondition implements Condition {
-  key: ConditionKey;
-  values: ConditionValue[];
+  key: Expression;
+  values: Expression[];
 
-  constructor(key: ConditionKey, values: ConditionValue[]) {
-    this.key = key;
-    this.values = values;
+  constructor(key: ExpressionValue, values: ExpressionValue[]) {
+    this.key = Q.expr(key);
+    this.values = values.map((v) => Q.exprValue(v));
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} IN (${this.values
-      .map((v) => flavor.escapeValue(v))
+    return `${this.key.toSQL(flavor)} IN (${this.values
+      .map((v) => v.toSQL(flavor))
       .join(", ")})`;
   }
 
@@ -187,28 +165,31 @@ class InCondition implements Condition {
   toJSON(): any {
     return {
       type: "InCondition",
-      key: this.key,
-      values: this.values.map(serializeValue),
+      key: this.key.serialize(),
+      values: this.values.map((v) => v.serialize()),
     };
   }
 
   static fromJSON(json: any): InCondition {
-    return new InCondition(json.key, json.values.map(deserializeValue));
+    return new InCondition(
+      Expression.deserialize(json.key),
+      json.values.map(Expression.deserializeValue)
+    );
   }
 }
 
 class NotInCondition implements Condition {
-  key: ConditionKey;
-  values: ConditionValue[];
+  key: Expression;
+  values: Expression[];
 
-  constructor(key: ConditionKey, values: ConditionValue[]) {
-    this.key = key;
-    this.values = values;
+  constructor(key: ExpressionValue, values: ExpressionValue[]) {
+    this.key = Q.expr(key);
+    this.values = values.map((v) => Q.expr(v));
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} NOT IN (${this.values
-      .map((v) => flavor.escapeValue(v))
+    return `${this.key.toSQL(flavor)} NOT IN (${this.values
+      .map((v) => v.toSQL(flavor))
       .join(", ")})`;
   }
 
@@ -216,112 +197,117 @@ class NotInCondition implements Condition {
   toJSON(): any {
     return {
       type: "NotInCondition",
-      key: this.key,
-      values: this.values.map(serializeValue),
+      key: this.key.serialize(),
+      values: this.values.map((v) => v.serialize()),
     };
   }
 
   static fromJSON(json: any): NotInCondition {
-    return new NotInCondition(json.key, json.values.map(deserializeValue));
+    return new NotInCondition(
+      Expression.deserialize(json.key),
+      json.values.map(Expression.deserializeValue)
+    );
   }
 }
 
 class NullCondition implements Condition {
-  key: ConditionKey;
+  key: Expression;
   isNull: boolean;
 
-  constructor(key: ConditionKey, isNull: boolean) {
-    this.key = key;
+  constructor(key: ExpressionValue, isNull: boolean) {
+    this.key = Q.expr(key);
     this.isNull = isNull;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} IS ${
-      this.isNull ? "" : "NOT "
-    }NULL`;
+    return `${this.key.toSQL(flavor)} IS ${this.isNull ? "" : "NOT "}NULL`;
   }
 
   // serialization
   toJSON(): any {
     return {
       type: "NullCondition",
-      key: this.key,
+      key: this.key.serialize(),
       isNull: this.isNull,
     };
   }
 
   static fromJSON(json: any): NullCondition {
-    return new NullCondition(json.key, json.isNull);
+    return new NullCondition(Expression.deserialize(json.key), json.isNull);
   }
 }
 
 class LikeCondition implements Condition {
-  key: ConditionKey;
+  key: Expression;
   pattern: string;
   isLike: boolean;
 
-  constructor(key: ConditionKey, pattern: string, isLike: boolean) {
-    this.key = key;
+  constructor(key: ExpressionValue, pattern: string, isLike: boolean) {
+    this.key = Q.expr(key);
     this.pattern = pattern;
     this.isLike = isLike;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.key)} ${
-      this.isLike ? "" : "NOT "
-    }LIKE \'${this.pattern}\'`;
+    return `${this.key.toSQL(flavor)} ${this.isLike ? "" : "NOT "}LIKE \'${
+      this.pattern
+    }\'`;
   }
 
   // serialization
   toJSON(): any {
     return {
       type: "LikeCondition",
-      key: this.key,
+      key: this.key.serialize(),
       pattern: this.pattern,
       isLike: this.isLike,
     };
   }
 
   static fromJSON(json: any): LikeCondition {
-    return new LikeCondition(json.key, json.pattern, json.isLike);
+    return new LikeCondition(
+      Expression.deserialize(json.key),
+      json.pattern,
+      json.isLike
+    );
   }
 }
 
 class ColumnComparisonCondition implements Condition {
-  leftKey: ConditionKey;
-  rightKey: ConditionKey;
+  leftKey: Expression;
+  rightKey: Expression;
   operator: Operator;
 
   constructor(
-    leftKey: ConditionKey,
-    rightKey: ConditionKey,
+    leftKey: ExpressionValue,
+    rightKey: ExpressionValue,
     operator: Operator
   ) {
-    this.leftKey = leftKey;
-    this.rightKey = rightKey;
+    this.leftKey = Q.expr(leftKey);
+    this.rightKey = Q.expr(rightKey);
     this.operator = operator;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${flavor.escapeColumn(this.leftKey)} ${
+    return `${this.leftKey.toSQL(flavor)} ${
       this.operator
-    } ${flavor.escapeColumn(this.rightKey)}`;
+    } ${this.rightKey.toSQL(flavor)}`;
   }
 
   // serialization
   toJSON(): any {
     return {
       type: "ColumnComparisonCondition",
-      leftKey: this.leftKey,
-      rightKey: this.rightKey,
+      leftKey: this.leftKey.serialize(),
+      rightKey: this.rightKey.serialize(),
       operator: this.operator,
     };
   }
 
   static fromJSON(json: any): ColumnComparisonCondition {
     return new ColumnComparisonCondition(
-      json.leftKey,
-      json.rightKey,
+      Expression.deserialize(json.leftKey),
+      Expression.deserialize(json.rightKey),
       json.operator
     );
   }
@@ -359,22 +345,26 @@ export const Conditions = {
     }
     return Conditions.equal(column, str);
   },
-  equal: (key: string, value: ConditionValue) =>
+  equal: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, "="),
-  notEqual: (key: string, value: ConditionValue) =>
+  notEqual: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, "!="),
-  greaterThan: (key: string, value: ConditionValue) =>
+  greaterThan: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, ">"),
-  lessThan: (key: string, value: ConditionValue) =>
+  lessThan: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, "<"),
-  greaterThanOrEqual: (key: string, value: ConditionValue) =>
+  greaterThanOrEqual: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, ">="),
-  lessThanOrEqual: (key: string, value: ConditionValue) =>
+  lessThanOrEqual: (key: ExpressionValue, value: ExpressionValue) =>
     new BinaryCondition(key, value, "<="),
-  between: (key: string, values: [ConditionValue, ConditionValue]) =>
-    new BetweenCondition(key, values[0], values[1]),
-  in: (key: string, values: ConditionValue[]) => new InCondition(key, values),
-  notIn: (key: string, values: ConditionValue[]) =>
+  between: (key: ExpressionValue, values: [ExpressionValue, ExpressionValue]) =>
+    new BetweenCondition(
+      key,
+      new ValueExpression(values[0]),
+      new ValueExpression(values[1])
+    ),
+  in: (key: string, values: ExpressionValue[]) => new InCondition(key, values),
+  notIn: (key: ExpressionValue, values: ExpressionValue[]) =>
     new NotInCondition(key, values),
   and: (conditions: Condition[]) => new LogicalCondition(conditions, "AND"),
   or: (conditions: Condition[]) => new LogicalCondition(conditions, "OR"),

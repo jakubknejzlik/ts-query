@@ -1,17 +1,20 @@
 import { ISQLFlavor } from "./Flavor";
 import { ISequelizable, ISerializable } from "./Query";
 
-export type ExpressionOrString = Expression | string;
+export type ExpressionRawValue = string | number;
+export type ExpressionValue = Expression | ExpressionRawValue;
 
 export class Expression implements ISerializable, ISequelizable {
-  constructor(private value: string) {}
+  constructor(protected value: ExpressionValue) {}
 
   toSQL(flavor: ISQLFlavor): string {
-    let value = this.value;
-    const stringMatches = this.value.match(/&([^#]+)&/g);
+    if (this.value instanceof Expression) {
+      return this.value.toSQL(flavor);
+    }
+    let value = `${this.value}`;
+    const stringMatches = value.match(/&([^#]+)&/g);
     if (stringMatches) {
       for (const match of stringMatches) {
-        const column = match.replace(/&/g, "");
         value = value.replace(
           match,
           flavor.escapeValue(match.substring(1, match.length - 1))
@@ -19,10 +22,9 @@ export class Expression implements ISerializable, ISequelizable {
       }
     }
 
-    const matches = this.value.match(/#([^#]+)#/g);
+    const matches = value.match(/#([^#]+)#/g);
     if (matches) {
       for (const match of matches) {
-        const column = match.replace(/#/g, "");
         value = value.replace(
           match,
           flavor.escapeColumn(match.substring(1, match.length - 1))
@@ -33,24 +35,48 @@ export class Expression implements ISerializable, ISequelizable {
     return flavor.escapeColumn(value, true);
   }
   serialize(): string {
-    return this.value;
+    return `${this.value}`;
   }
-  static deserialize(value: ExpressionOrString): Expression {
-    if (typeof value === "string") {
+  static deserialize(value: ExpressionValue): Expression {
+    if (typeof value === "string" && value.startsWith("!!!")) {
+      return ValueExpression.deserialize(value);
+    }
+    if (typeof value === "string" || typeof value === "number") {
       return new Expression(value);
     }
     return value;
   }
-  static escapeColumn(column: string): string {
+  static deserializeValue(value: ExpressionValue): ValueExpression {
+    return ValueExpression.deserialize(value);
+  }
+  static escapeColumn(column: ExpressionRawValue): string {
     return `#${column}#`;
   }
-  static escapeString(column: string): string {
+  static escapeString(column: ExpressionRawValue): string {
     return `&${column}&`;
   }
-  static fromColumnOrExpression(column: ExpressionOrString): string {
-    if (typeof column === "string") {
+  static escapeExpressionValue(column: ExpressionValue): string {
+    if (typeof column === "string" || typeof column === "number") {
       return this.escapeColumn(column);
     }
-    return column.value;
+    return `${column.value}`;
+  }
+}
+
+export class ValueExpression extends Expression {
+  toSQL(flavor: ISQLFlavor): string {
+    if (typeof this.value === "number" || typeof this.value === "string") {
+      return flavor.escapeValue(this.value);
+    }
+    return this.value.toSQL(flavor);
+  }
+  serialize(): string {
+    return `!!!` + JSON.stringify(this.value);
+  }
+  static deserialize(value: ExpressionValue): ValueExpression {
+    if (typeof value === "string" && value.startsWith("!!!")) {
+      return new ValueExpression(JSON.parse(value.substring(3)));
+    }
+    return new ValueExpression(value);
   }
 }

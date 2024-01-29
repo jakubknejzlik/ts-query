@@ -1,5 +1,5 @@
 import { Condition } from "./Condition";
-import { Expression, ExpressionOrString } from "./Expression";
+import { Expression, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
@@ -197,7 +197,7 @@ class Join {
 }
 
 interface SelectField {
-  name: ExpressionOrString;
+  name: ExpressionValue;
   alias?: string;
 }
 
@@ -216,11 +216,11 @@ class SelectBaseQuery extends QueryBase {
   }
 
   // @deprecated please use addFields
-  field(name: ExpressionOrString, alias?: string): this {
+  field(name: ExpressionValue, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
   // add singleField
-  addField(name: ExpressionOrString, alias?: string): this {
+  addField(name: ExpressionValue, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
   // add multiple fields
@@ -498,6 +498,7 @@ export const Query = {
   deserialize,
   flavors,
   expr: Expression.deserialize,
+  exprValue: Expression.deserializeValue,
   S: (literals: string | readonly string[]) => {
     return Fn.string(`${literals}`);
   },
