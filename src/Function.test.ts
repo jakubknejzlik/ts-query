@@ -1,3 +1,4 @@
+import { Cond } from "./Condition";
 import { Fn } from "./Function";
 import { Q } from "./Query";
 
@@ -19,5 +20,11 @@ describe("Expression", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
       'SUM(IFNULL(`foo`,"123"))'
     );
+    expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
+      'SUM(IFNULL(`foo`,"123"))'
+    );
+    expect(
+      Fn.sum(Fn.if(Cond.equal("foo_blah", 123), "aa", 123)).toSQL(flavor)
+    ).toEqual('SUM(IF(`foo_blah` = 123,"aa",123))');
   });
 });

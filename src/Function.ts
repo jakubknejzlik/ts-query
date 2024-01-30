@@ -86,9 +86,11 @@ export const Function = {
     falseValue: ExpressionValue,
     flavor: ISQLFlavor = defaultFlavor
   ) => {
-    return `IF(${condition.toSQL(flavor)},${Expression.escapeExpressionValue(
-      trueValue
-    )},${Expression.escapeExpressionValue(falseValue)})`;
+    return Q.expr(
+      `IF(${condition.toSQL(flavor)},${Expression.escapeValue(
+        trueValue
+      )},${Expression.escapeValue(falseValue)})`
+    );
   },
   dateRangeSumField: ({
     dateColumn,
@@ -101,9 +103,11 @@ export const Function = {
     start: Dayjs | string;
     end: Dayjs | string;
   }) =>
-    `SUM(IF(${dateColumn} BETWEEN '${formatDayjs(
-      dayjs(start)
-    )}' AND '${formatDayjs(dayjs(end))}',${valueColumn},0))`,
+    Q.expr(
+      `SUM(IF(${dateColumn} BETWEEN '${formatDayjs(
+        dayjs(start)
+      )}' AND '${formatDayjs(dayjs(end))}',${valueColumn},0))`
+    ),
 
   priceCurrentAndPreviousDiffField: ({
     thisYearColumn,
