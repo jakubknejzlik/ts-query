@@ -241,8 +241,7 @@ class SelectBaseQuery extends QueryBase {
   fields(fields: SelectField[]): this {
     const clone = this.clone();
     clone._fields = [];
-    clone.addFields(fields);
-    return clone;
+    return clone.addFields(fields);
   }
 
   toSQL(flavor: ISQLFlavor): string {

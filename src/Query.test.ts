@@ -23,6 +23,13 @@ describe("Query builder SQL", () => {
     expect(
       Query.select().from("table").field("foo", "blah").toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah` FROM `table`");
+    expect(
+      Query.select()
+        .from("table")
+        .fields([{ name: "foo", alias: "blah" }])
+        .field("foo2", "blah2")
+        .toSQL(flavor)
+    ).toEqual("SELECT `foo` AS `blah`, `foo2` AS `blah2` FROM `table`");
   });
 
   // WHERE Conditions
