@@ -140,8 +140,8 @@ class BetweenCondition implements Condition {
   static fromJSON(json: any): BetweenCondition {
     return new BetweenCondition(
       Expression.deserialize(json.key),
-      Expression.deserialize(json.from),
-      Expression.deserialize(json.to)
+      Expression.deserializeValue(json.from),
+      Expression.deserializeValue(json.to)
     );
   }
 }

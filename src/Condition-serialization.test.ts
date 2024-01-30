@@ -38,10 +38,20 @@ describe("Condition Serialization and Deserialization", () => {
 
   // BETWEEN
   it("should serialize and deserialize between condition", () => {
-    const condition = Conditions.between("foo", [1, 2]);
+    const condition = Conditions.between("foo", ["abcd", 2]);
     const serialized = condition.toJSON();
     const deserialized = Condition.fromJSON(serialized);
     expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+
+    const json = {
+      type: "BetweenCondition",
+      key: "foo",
+      from: "abcd",
+      to: 2,
+    };
+    expect(Condition.fromJSON(json).toSQL(flavor)).toEqual(
+      condition.toSQL(flavor)
+    );
   });
 
   // IN
