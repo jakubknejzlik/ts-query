@@ -13,7 +13,7 @@ describe("Query builder SQL", () => {
     expect(
       Query.select()
         .from("table")
-        .field("foo")
+        .addField("foo")
         .addField(Fn.max("foo"), "fooMax")
         .addField("MAX(foo)", "fooMax2")
         .toSQL(flavor)
@@ -21,13 +21,13 @@ describe("Query builder SQL", () => {
       "SELECT `foo`, MAX(`foo`) AS `fooMax`, MAX(foo) AS `fooMax2` FROM `table`"
     );
     expect(
-      Query.select().from("table").field("foo", "blah").toSQL(flavor)
+      Query.select().from("table").addField("foo", "blah").toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah` FROM `table`");
     expect(
       Query.select()
         .from("table")
         .fields([{ name: "foo", alias: "blah" }])
-        .field("foo2", "blah2")
+        .addField("foo2", "blah2")
         .toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah`, `foo2` AS `blah2` FROM `table`");
   });
@@ -104,8 +104,8 @@ describe("Query builder SQL", () => {
     expect(
       Query.select()
         .from("table")
-        .field("foo")
-        .field("bar", "aliasBar")
+        .addField("foo")
+        .addField("bar", "aliasBar")
         .where(Cond.equal("foo", 123))
         .orderBy("bar", "DESC")
         .limit(10)
@@ -118,8 +118,8 @@ describe("Query builder SQL", () => {
   it("should handle complex queries immutability", () => {
     const q = Query.select()
       .from("table")
-      .field("foo")
-      .field("bar", "aliasBar")
+      .addField("foo")
+      .addField("bar", "aliasBar")
       .where(Cond.equal("foo", 123))
       .orderBy("bar", "DESC")
       .limit(10)
@@ -203,8 +203,8 @@ describe("Query builder SQL", () => {
 describe("Query builder SQL with UNION", () => {
   // Basic UNION
   it("should handle basic UNION", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
     expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT `foo` FROM `table1`) UNION (SELECT `bar` FROM `table2`)"
     );
@@ -221,8 +221,8 @@ describe("Query builder SQL with UNION", () => {
 
   // UNION ALL
   it("should handle UNION ALL", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
     expect(query1.union(query2, UnionType.UNION_ALL).toSQL(flavor)).toEqual(
       "(SELECT `foo` FROM `table1`) UNION ALL (SELECT `bar` FROM `table2`)"
     );
@@ -230,9 +230,9 @@ describe("Query builder SQL with UNION", () => {
 
   // Chained UNIONs
   it("should handle chained UNIONs", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
-    const query3 = Query.select().from("table3").field("baz");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
+    const query3 = Query.select().from("table3").addField("baz");
     expect(query1.union(query2).union(query3).toSQL(flavor)).toEqual(
       "((SELECT `foo` FROM `table1`) UNION (SELECT `bar` FROM `table2`)) UNION (SELECT `baz` FROM `table3`)"
     );
@@ -242,13 +242,13 @@ describe("Query builder SQL with UNION", () => {
   it("should handle UNION with complex queries", () => {
     const query1 = Query.select()
       .from("table1")
-      .field("foo")
+      .addField("foo")
       .where(Cond.equal("foo", 123))
       .orderBy("foo", "DESC")
       .limit(10);
     const query2 = Query.select()
       .from("table2")
-      .field("bar")
+      .addField("bar")
       .where(Cond.equal("bar", 456))
       .orderBy("bar", "ASC")
       .limit(5);
@@ -259,8 +259,8 @@ describe("Query builder SQL with UNION", () => {
 
   // UNION with alias
   it("should handle UNION with table alias", () => {
-    const query1 = Query.select().from("table1", "T1").field("T1.foo");
-    const query2 = Query.select().from("table2", "T2").field("T2.bar");
+    const query1 = Query.select().from("table1", "T1").addField("T1.foo");
+    const query2 = Query.select().from("table2", "T2").addField("T2.bar");
     expect(query1.union(query2).toSQL(flavor)).toEqual(
       "(SELECT `T1`.`foo` FROM `table1` AS `T1`) UNION (SELECT `T2`.`bar` FROM `table2` AS `T2`)"
     );
@@ -268,8 +268,8 @@ describe("Query builder SQL with UNION", () => {
 
   // UNION serialization
   it("should handle UNION with table alias", () => {
-    const query1 = Query.select().from("table1", "T1").field("T1.foo");
-    const query2 = Query.select().from("table2", "T2").field("T2.bar");
+    const query1 = Query.select().from("table1", "T1").addField("T1.foo");
+    const query2 = Query.select().from("table2", "T2").addField("T2.bar");
     const q = query1.union(query2);
     const ser = q.serialize();
     const q2 = Q.deserialize(ser);
@@ -280,8 +280,8 @@ describe("Query builder SQL with UNION", () => {
 describe("Query builder Serialization with UNION", () => {
   // Serialization of basic UNION
   it("should serialize and deserialize basic UNION", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
     const unionQuery = query1.union(query2);
 
     const serialized = unionQuery.serialize();
@@ -292,8 +292,8 @@ describe("Query builder Serialization with UNION", () => {
 
   // Serialization of UNION ALL
   it("should serialize and deserialize UNION ALL", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
     const unionAllQuery = query1.union(query2, UnionType.UNION_ALL);
 
     const serialized = unionAllQuery.serialize();
@@ -306,11 +306,11 @@ describe("Query builder Serialization with UNION", () => {
   it("should serialize and deserialize complex UNION queries", () => {
     const query1 = Query.select()
       .from("table1")
-      .field("foo")
+      .addField("foo")
       .where(Cond.equal("foo", 1));
     const query2 = Query.select()
       .from("table2")
-      .field("bar")
+      .addField("bar")
       .where(Cond.equal("bar", 2));
     const complexUnionQuery = query1.union(query2);
 
@@ -322,9 +322,9 @@ describe("Query builder Serialization with UNION", () => {
 
   // Serialization of chained UNIONs
   it("should serialize and deserialize chained UNIONs", () => {
-    const query1 = Query.select().from("table1").field("foo");
-    const query2 = Query.select().from("table2").field("bar");
-    const query3 = Query.select().from("table3").field("baz");
+    const query1 = Query.select().from("table1").addField("foo");
+    const query2 = Query.select().from("table2").addField("bar");
+    const query3 = Query.select().from("table3").addField("baz");
     const chainedUnionQuery = query1.union(query2).union(query3);
 
     const serialized = chainedUnionQuery.serialize();

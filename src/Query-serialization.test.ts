@@ -16,8 +16,8 @@ describe("Query builder JSON Serialization/Deserialization", () => {
   it("should handle round-trip JSON serialization and deserialization for a complex query", () => {
     const originalQuery = Q.select()
       .from("table")
-      .field("foo")
-      .field("bar", "aliasBar")
+      .addField("foo")
+      .addField("bar", "aliasBar")
       .where(Conditions.equal("foo", 123))
       .orderBy("bar", "DESC")
       .limit(10)
@@ -53,7 +53,7 @@ describe("Query builder JSON Serialization/Deserialization", () => {
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });
   it("should handle round-trip JSON serialization and deserialization stats query", () => {
-    const originalQuery = Q.stats().field(
+    const originalQuery = Q.stats().addField(
       "SUM(price_without_charges)",
       "price_without_charges"
     );

@@ -215,11 +215,11 @@ class SelectBaseQuery extends QueryBase {
     return clone;
   }
 
-  // @deprecated please use addFields
+  // @deprecated please use addField
   field(name: ExpressionValue, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
-  // add singleField
+  // add single field
   addField(name: ExpressionValue, alias?: string): this {
     return this.addFields([{ name, alias }]);
   }
