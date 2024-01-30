@@ -202,7 +202,7 @@ interface SelectField {
 }
 
 interface Order {
-  field: string;
+  field: Expression;
   direction: "ASC" | "DESC";
 }
 
@@ -272,7 +272,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   protected _limit?: number;
   protected _offset?: number;
   protected _orderBy: Order[] = [];
-  protected _groupBy: string[] = [];
+  protected _groupBy: Expression[] = [];
   protected _unionQueries: { query: SelectQuery; type: UnionType }[] = [];
 
   public clone(): this {
@@ -331,9 +331,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   public getOrderBy(): Order[] {
     return this._orderBy;
   }
-  orderBy(field: string, direction: "ASC" | "DESC" = "ASC"): this {
+  orderBy(field: ExpressionValue, direction: "ASC" | "DESC" = "ASC"): this {
     const clone = this.clone();
-    clone._orderBy.push({ field, direction });
+    clone._orderBy.push({ field: Expression.deserialize(field), direction });
     return clone;
   }
   removeOrderBy(): this {
@@ -341,12 +341,12 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     clone._orderBy = [];
     return clone;
   }
-  public getGroupBy(): string[] {
+  public getGroupBy(): Expression[] {
     return this._groupBy;
   }
-  groupBy(...field: string[]): this {
+  groupBy(...field: ExpressionValue[]): this {
     const clone = this.clone();
-    clone._groupBy.push(...field);
+    clone._groupBy.push(...field.map((f) => Expression.deserialize(f)));
     return clone;
   }
   removeGroupBy(): this {
@@ -383,7 +383,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     }
     if (this._groupBy.length > 0) {
       sql += ` GROUP BY ${this._groupBy
-        .map((c) => flavor.escapeColumn(c))
+        .map((c) => c.toSQL(flavor))
         .join(", ")}`;
     }
     if (this._having.length > 0) {
@@ -393,7 +393,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     }
     if (this._orderBy.length > 0) {
       sql += ` ORDER BY ${this._orderBy
-        .map((o) => `${flavor.escapeColumn(o.field)} ${o.direction}`)
+        .map((o) => `${o.field.toSQL(flavor)} ${o.direction}`)
         .join(", ")}`;
     }
     if (this._limit) {
@@ -432,8 +432,11 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
       having: this._having.map((condition) => condition.toJSON()),
       limit: this._limit,
       offset: this._offset,
-      orderBy: this._orderBy,
-      groupBy: this._groupBy,
+      orderBy: this._orderBy.map((o) => ({
+        field: o.field.serialize(),
+        direction: o.direction,
+      })),
+      groupBy: this._groupBy.map((c) => c.serialize()),
     };
   }
   static fromJSON(json: any): SelectQuery {
@@ -460,8 +463,11 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     );
     query._limit = json.limit;
     query._offset = json.offset;
-    query._orderBy = json.orderBy ?? [];
-    query._groupBy = json.groupBy ?? [];
+    query._orderBy = (json.orderBy ?? []).map((o: any) => ({
+      field: Expression.deserialize(o.field),
+      direction: o.direction,
+    }));
+    query._groupBy = (json.groupBy ?? []).map((v) => Expression.deserialize(v));
     return query;
   }
 }

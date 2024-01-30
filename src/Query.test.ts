@@ -15,8 +15,11 @@ describe("Query builder SQL", () => {
         .from("table")
         .field("foo")
         .addField(Fn.max("foo"), "fooMax")
+        .addField("MAX(foo)", "fooMax2")
         .toSQL(flavor)
-    ).toEqual("SELECT `foo`, MAX(`foo`) AS `fooMax` FROM `table`");
+    ).toEqual(
+      "SELECT `foo`, MAX(`foo`) AS `fooMax`, MAX(foo) AS `fooMax2` FROM `table`"
+    );
     expect(
       Query.select().from("table").field("foo", "blah").toSQL(flavor)
     ).toEqual("SELECT `foo` AS `blah` FROM `table`");
@@ -27,6 +30,18 @@ describe("Query builder SQL", () => {
     expect(
       Query.select().from("table").where(Cond.equal("foo", 123)).toSQL(flavor)
     ).toEqual("SELECT * FROM `table` WHERE `foo` = 123");
+    expect(
+      Query.select()
+        .from("table")
+        .where(Cond.equal("SUM(foo)", 123))
+        .toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` WHERE SUM(foo) = 123");
+    expect(
+      Query.select()
+        .from("table")
+        .where(Cond.equal(Fn.sum("foo"), 123))
+        .toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` WHERE SUM(`foo`) = 123");
     expect(
       Query.select()
         .from("table")
@@ -56,6 +71,12 @@ describe("Query builder SQL", () => {
     expect(
       Query.select().from("table").orderBy("foo", "DESC").toSQL(flavor)
     ).toEqual("SELECT * FROM `table` ORDER BY `foo` DESC");
+    expect(
+      Query.select().from("table").orderBy("SUM(foo)", "DESC").toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` ORDER BY SUM(foo) DESC");
+    expect(
+      Query.select().from("table").orderBy(Fn.sum("foo"), "DESC").toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` ORDER BY SUM(`foo`) DESC");
   });
 
   // GROUP BY
@@ -63,6 +84,12 @@ describe("Query builder SQL", () => {
     expect(Query.select().from("table").groupBy("foo").toSQL(flavor)).toEqual(
       "SELECT * FROM `table` GROUP BY `foo`"
     );
+    expect(
+      Query.select().from("table").groupBy("YEAR(foo)").toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` GROUP BY YEAR(foo)");
+    expect(
+      Query.select().from("table").groupBy(Fn.year("foo")).toSQL(flavor)
+    ).toEqual("SELECT * FROM `table` GROUP BY YEAR(`foo`)");
   });
 
   // Complex Queries
