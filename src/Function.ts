@@ -87,9 +87,9 @@ export const Function = {
     flavor: ISQLFlavor = defaultFlavor
   ) => {
     return Q.expr(
-      `IF(${condition.toSQL(flavor)},${Expression.escapeValue(
+      `IF(${condition.toSQL(flavor)},${Expression.escapeExpressionValue(
         trueValue
-      )},${Expression.escapeValue(falseValue)})`
+      )},${Expression.escapeExpressionValue(falseValue)})`
     );
   },
   dateRangeSumField: ({

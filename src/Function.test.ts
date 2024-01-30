@@ -25,6 +25,6 @@ describe("Expression", () => {
     );
     expect(
       Fn.sum(Fn.if(Cond.equal("foo_blah", 123), "aa", 123)).toSQL(flavor)
-    ).toEqual('SUM(IF(`foo_blah` = 123,"aa",123))');
+    ).toEqual("SUM(IF(`foo_blah` = 123,`aa`,`123`))");
   });
 });

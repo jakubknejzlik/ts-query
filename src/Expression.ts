@@ -61,15 +61,6 @@ export class Expression implements ISerializable, ISequelizable {
     }
     return `${column.value}`;
   }
-  static escapeValue(column: ExpressionValue): string {
-    if (typeof column === "string") {
-      return this.escapeString(column);
-    }
-    if (typeof column === "number") {
-      return `${column}`;
-    }
-    return `${column.value}`;
-  }
 }
 
 export class ValueExpression extends Expression {
