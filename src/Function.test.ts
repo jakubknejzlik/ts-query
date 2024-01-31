@@ -8,6 +8,14 @@ describe("Expression", () => {
   it("should produce valid SQL", () => {
     expect(Fn.sum("foo").toSQL(flavor)).toEqual("SUM(`foo`)");
     expect(Fn.max("foo").toSQL(flavor)).toEqual("MAX(`foo`)");
+    expect(Fn.add("foo", "blah").toSQL(flavor)).toEqual("(`foo` + `blah`)");
+    expect(Fn.subtract("foo", "blah").toSQL(flavor)).toEqual(
+      "(`foo` - `blah`)"
+    );
+    expect(Fn.multiply("foo", "blah").toSQL(flavor)).toEqual(
+      "(`foo` * `blah`)"
+    );
+    expect(Fn.divide("foo", "blah").toSQL(flavor)).toEqual("(`foo` / `blah`)");
     expect(Fn.ifnull("foo", `123`).toSQL(flavor)).toEqual("IFNULL(`foo`,123)");
     expect(Fn.ifnull("foo", Q.S`123`).toSQL(flavor)).toEqual(
       'IFNULL(`foo`,"123")'

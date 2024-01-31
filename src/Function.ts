@@ -9,6 +9,26 @@ const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 const defaultFlavor = new MySQLFlavor();
 
 export const Function = {
+  add: (...columns: ExpressionValue[]) => {
+    return Q.expr(
+      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" + ")})`
+    );
+  },
+  subtract: (...columns: ExpressionValue[]) => {
+    return Q.expr(
+      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" - ")})`
+    );
+  },
+  divide: (...columns: ExpressionValue[]) => {
+    return Q.expr(
+      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" / ")})`
+    );
+  },
+  multiply: (...columns: ExpressionValue[]) => {
+    return Q.expr(
+      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" * ")})`
+    );
+  },
   sum: (column: ExpressionValue) => {
     return Q.expr(`SUM(${Expression.escapeExpressionValue(column)})`);
   },
