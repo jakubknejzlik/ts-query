@@ -31,8 +31,14 @@ describe("Expression", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
       'SUM(IFNULL(`foo`,"123"))'
     );
+    expect(Fn.sum(Fn.ifnull("foo", `-123`)).toSQL(flavor)).toEqual(
+      "SUM(IFNULL(`foo`,-123))"
+    );
     expect(
       Fn.sum(Fn.if(Cond.equal("foo_blah", 123), "aa", 123)).toSQL(flavor)
     ).toEqual("SUM(IF(`foo_blah` = 123,`aa`,`123`))");
+    expect(
+      Fn.if(Cond.equal("foo_blah", 123), "aa", Q.expr(-123)).toSQL(flavor)
+    ).toEqual("IF(`foo_blah` = 123,`aa`,-123)");
   });
 });
