@@ -55,4 +55,10 @@ describe("Query builder metadata", () => {
     const tables = query.getTableNames();
     expect(tables).toEqual([]);
   });
+
+  it("should get operation type for query", () => {
+    const query = Q.select();
+    const operation = query.getOperationType();
+    expect(operation).toEqual("select");
+  });
 });

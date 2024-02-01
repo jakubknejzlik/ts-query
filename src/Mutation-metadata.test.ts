@@ -16,4 +16,9 @@ describe("Query builder metadata", () => {
     const tables = query.getTableNames();
     expect(tables).toEqual(["table"]);
   });
+  it("should get operation type", () => {
+    expect(Q.insert("table").getOperationType()).toEqual("insert");
+    expect(Q.update("table").getOperationType()).toEqual("update");
+    expect(Q.delete("table").getOperationType()).toEqual("delete");
+  });
 });

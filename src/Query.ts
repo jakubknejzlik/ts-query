@@ -4,6 +4,12 @@ import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
 import { Fn } from "./Function";
+import {
+  IMetadata,
+  ISequelizable,
+  ISerializable,
+  MetadataOperationType,
+} from "./interfaces";
 import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 
 const flavors = {
@@ -12,13 +18,6 @@ const flavors = {
 };
 
 type TableSource = string | SelectQuery;
-
-export interface ISequelizable {
-  toSQL(flavor: ISQLFlavor): string;
-}
-export interface ISerializable {
-  serialize(): string;
-}
 
 export class Table implements ISequelizable, ISerializable {
   constructor(public source: TableSource, public alias?: string) {}
@@ -71,9 +70,13 @@ export const escapeTable = (table: TableSource, flavor: ISQLFlavor): string => {
   return flavor.escapeTable(table);
 };
 
-export class QueryBase implements ISequelizable {
+export class QueryBase implements ISequelizable, IMetadata {
   protected _tables: Table[] = [];
   protected _joins: Join[] = [];
+
+  public getOperationType(): MetadataOperationType {
+    return "select";
+  }
 
   // @ts-ignore
   public get table(): Table | undefined {

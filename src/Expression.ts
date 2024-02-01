@@ -1,5 +1,5 @@
 import { ISQLFlavor } from "./Flavor";
-import { ISequelizable, ISerializable } from "./Query";
+import { ISequelizable, ISerializable } from "./interfaces";
 
 export type ExpressionRawValue = string | number;
 export type ExpressionValue = Expression | ExpressionRawValue;

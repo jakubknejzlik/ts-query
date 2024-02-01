@@ -1,7 +1,13 @@
 import { Condition, ConditionValue } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
-import { ISequelizable, ISerializable, Table } from "./Query";
+import { Table } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
+import {
+  IMetadata,
+  ISequelizable,
+  ISerializable,
+  MetadataOperationType,
+} from "./interfaces";
 
 export class MutationBase {
   protected _table: Table;
@@ -37,9 +43,13 @@ export class MutationBase {
 
 export class DeleteMutation
   extends MutationBase
-  implements ISerializable, ISequelizable
+  implements ISerializable, ISequelizable, IMetadata
 {
   protected _where: Condition[] = [];
+
+  public getOperationType(): MetadataOperationType {
+    return "delete";
+  }
 
   public clone(): this {
     const clone = super.clone();
@@ -86,9 +96,13 @@ export class DeleteMutation
 
 export class InsertMutation
   extends MutationBase
-  implements ISerializable, ISequelizable
+  implements ISerializable, ISequelizable, IMetadata
 {
   protected _values: Record<string, ConditionValue> = {};
+
+  public getOperationType(): MetadataOperationType {
+    return "insert";
+  }
 
   public clone(): this {
     const clone = super.clone();
@@ -135,10 +149,14 @@ export class InsertMutation
 
 export class UpdateMutation
   extends MutationBase
-  implements ISerializable, ISequelizable
+  implements ISerializable, ISequelizable, IMetadata
 {
   protected _values: Record<string, ConditionValue> = {};
   protected _where: Condition[] = [];
+
+  public getOperationType(): MetadataOperationType {
+    return "update";
+  }
 
   public clone(): this {
     const clone = super.clone();
