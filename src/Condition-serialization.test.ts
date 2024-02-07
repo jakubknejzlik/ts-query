@@ -11,6 +11,12 @@ describe("Condition Serialization and Deserialization", () => {
     const deserialized = Condition.fromJSON(serialized);
     expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
   });
+  it("should serialize and deserialize equal condition multiple times", () => {
+    const condition = Conditions.equal("foo", 123);
+    const serialized = Condition.fromJSON(condition.toJSON()).toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
 
   // NOT EQUAL
   it("should serialize and deserialize notEqual condition", () => {

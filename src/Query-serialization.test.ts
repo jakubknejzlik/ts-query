@@ -12,6 +12,17 @@ describe("Query builder JSON Serialization/Deserialization", () => {
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });
 
+  // Multiple Serialization and Deserialization
+  it("should handle multiple JSON serialization and deserialization for a basic query", () => {
+    const originalQuery = Q.select()
+      .from("table")
+      .where(Conditions.equal("foo", 123));
+    const jsonStr = originalQuery.serialize();
+    const jsonStr2 = Q.deserialize(jsonStr).serialize();
+    const deserializedQuery = Q.deserialize(jsonStr2);
+    expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
+  });
+
   // Round-trip Serialization and Deserialization for Complex Query
   it("should handle round-trip JSON serialization and deserialization for a complex query", () => {
     const originalQuery = Q.select()

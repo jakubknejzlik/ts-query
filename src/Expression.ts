@@ -47,6 +47,9 @@ export class Expression implements ISerializable, ISequelizable {
     return value;
   }
   static deserializeValue(value: ExpressionValue): ValueExpression {
+    if (value instanceof ValueExpression) {
+      return value;
+    }
     return ValueExpression.deserialize(value);
   }
   static escapeColumn(column: ExpressionRawValue): string {
@@ -75,7 +78,8 @@ export class ValueExpression extends Expression {
   }
   static deserialize(value: ExpressionValue): ValueExpression {
     if (typeof value === "string" && value.startsWith("!!!")) {
-      return new ValueExpression(JSON.parse(value.substring(3)));
+      const res = new ValueExpression(JSON.parse(value.substring(3)));
+      return res;
     }
     return new ValueExpression(value);
   }

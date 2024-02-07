@@ -44,4 +44,22 @@ describe("Expression serialization", () => {
       Expression.deserialize(Expression.escapeString("blah")).toSQL(flavor)
     );
   });
+
+  it("should serialize/deserialize expressions multiple times", () => {
+    const expr = Q.expr("foo");
+    expect(
+      Expression.deserialize(
+        Expression.deserialize(expr.serialize()).serialize()
+      ).toSQL(flavor)
+    ).toEqual(expr.toSQL(flavor));
+
+    const expr2 = Q.exprValue(123);
+    expect(
+      Expression.deserialize(
+        Expression.deserializeValue(
+          Expression.deserializeValue(expr2.serialize()).serialize()
+        ).serialize()
+      ).toSQL(flavor)
+    ).toEqual(expr2.toSQL(flavor));
+  });
 });
