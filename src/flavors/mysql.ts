@@ -19,13 +19,15 @@ export class MySQLFlavor implements ISQLFlavor {
             `${this.columnQuotes}${this.columnQuotes}`
           )
           .split(".")
-          .join("`.`")}${this.columnQuotes}`;
+          .join(`${this.columnQuotes}.${this.columnQuotes}`)}${
+          this.columnQuotes
+        }`;
       }
       return `${name}`;
     }
-    return `${this.columnQuotes}${name.split(".").join("`.`")}${
-      this.columnQuotes
-    }`;
+    return `${this.columnQuotes}${name
+      .split(".")
+      .join(`${this.columnQuotes}.${this.columnQuotes}`)}${this.columnQuotes}`;
   }
 
   escapeTable(table: string): string {
