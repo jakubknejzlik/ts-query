@@ -398,12 +398,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
         .map((o) => `${o.field.toSQL(flavor)} ${o.direction}`)
         .join(", ")}`;
     }
-    if (this._limit) {
-      sql += ` LIMIT ${this._limit}`;
-    }
-    if (this._offset) {
-      sql += ` OFFSET ${this._offset}`;
-    }
+
+    sql += flavor.escapeLimitAndOffset(this._limit, this._offset);
+
     this._unionQueries.forEach((unionQuery) => {
       sql =
         `(` + sql + `) ${unionQuery.type} (${unionQuery.query.toSQL(flavor)})`;

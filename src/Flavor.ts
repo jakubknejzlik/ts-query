@@ -4,4 +4,5 @@ export interface ISQLFlavor {
   escapeColumn(name: string, legacy?: boolean): string;
   escapeTable(table: string): string;
   escapeValue(value: ConditionValue): string;
+  escapeLimitAndOffset(limit?: number, offset?: number): string;
 }

@@ -1,6 +1,6 @@
 import { Cond } from "./Condition";
 import { Fn } from "./Function";
-import { Query, SelectQuery, UnionType, Q } from "./Query";
+import { Q, Query, UnionType } from "./Query";
 
 const flavor = Q.flavors.mysql;
 

@@ -1,6 +1,7 @@
 import { isDayjs } from "dayjs";
 import { ConditionValue } from "../Condition";
 import { ISQLFlavor } from "../Flavor";
+import { SelectQuery } from "../Query";
 
 export class MySQLFlavor implements ISQLFlavor {
   protected columnQuotes = "`";
@@ -47,5 +48,16 @@ export class MySQLFlavor implements ISQLFlavor {
       return `${this.stringQuotes}${value}${this.stringQuotes}`;
     }
     return `${value}`;
+  }
+
+  escapeLimitAndOffset(limit?: number, offset?: number): string {
+    let str = "";
+    if (limit !== undefined) {
+      str += ` LIMIT ${limit}`;
+    }
+    if (offset !== undefined) {
+      str += ` OFFSET ${offset}`;
+    }
+    return str;
   }
 }

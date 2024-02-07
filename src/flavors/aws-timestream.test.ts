@@ -12,9 +12,11 @@ describe("Query builder AWS Timestream flavor", () => {
       .from("table")
       .where(Cond.equal("foo", 123))
       .where(Cond.equal("blah", "hello"))
-      .orderBy("foo", "DESC");
+      .orderBy("foo", "DESC")
+      .limit(100)
+      .offset(2);
     expect(query.toSQL(flavor)).toEqual(
-      `SELECT "foo" AS "blah", MAX("foo") AS "blahMax" FROM "table" WHERE "foo" = 123 AND "blah" = 'hello' ORDER BY "foo" DESC`
+      `SELECT "foo" AS "blah", MAX("foo") AS "blahMax" FROM "table" WHERE "foo" = 123 AND "blah" = 'hello' ORDER BY "foo" DESC OFFSET 2 LIMIT 100`
     );
   });
 });
