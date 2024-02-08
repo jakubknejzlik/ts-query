@@ -11,6 +11,7 @@ import {
   ISequelizable,
   ISerializable,
   MetadataOperationType,
+  OperationType,
 } from "./interfaces";
 import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 
@@ -50,7 +51,7 @@ export class Table implements ISequelizable, ISerializable {
   static fromJSON(json: any): Table {
     if (
       typeof json.source === "object" &&
-      json.source["type"] === MetadataOperationType.SELECT
+      json.source["type"] === OperationType.SELECT
     ) {
       return new Table(SelectQuery.fromJSON(json.source), json.alias);
     }
@@ -416,7 +417,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
   toJSON(): any {
     return {
-      type: MetadataOperationType.SELECT,
+      type: OperationType.SELECT,
       tables: this._tables.map((table) =>
         typeof table === "string" ? table : table.toJSON()
       ),
@@ -476,18 +477,18 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
 const deserialize = (json: string) => {
   try {
     const parsed = JSON.parse(json);
-    switch (parsed.type as MetadataOperationType) {
-      case MetadataOperationType.SELECT:
+    switch (parsed.type as OperationType) {
+      case OperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
-      case MetadataOperationType.DELETE:
+      case OperationType.DELETE:
         return DeleteMutation.fromJSON(parsed);
-      case MetadataOperationType.INSERT:
+      case OperationType.INSERT:
         return InsertMutation.fromJSON(parsed);
-      case MetadataOperationType.UPDATE:
+      case OperationType.UPDATE:
         return UpdateMutation.fromJSON(parsed);
-      case MetadataOperationType.CREATE_TABLE_AS:
+      case OperationType.CREATE_TABLE_AS:
         return CreateTableAsSelect.fromJSON(parsed);
-      case MetadataOperationType.CREATE_VIEW_AS:
+      case OperationType.CREATE_VIEW_AS:
         return CreateViewAsSelect.fromJSON(parsed);
       default:
         throw new Error("Unknown mutation type");

@@ -1,12 +1,12 @@
-import { Condition, ConditionValue } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
-import { Q, SelectQuery, Table } from "./Query";
+import { SelectQuery } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
   ISerializable,
   MetadataOperationType,
+  OperationType,
 } from "./interfaces";
 
 export class CreateTableAsSelect
@@ -38,7 +38,7 @@ export class CreateTableAsSelect
 
   toJSON() {
     return {
-      type: MetadataOperationType.CREATE_TABLE_AS,
+      type: OperationType.CREATE_TABLE_AS,
       select: this._select.toJSON(),
       tableName: this._tableName,
     };

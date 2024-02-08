@@ -7,6 +7,7 @@ import {
   ISequelizable,
   ISerializable,
   MetadataOperationType,
+  OperationType,
 } from "./interfaces";
 
 export class MutationBase {
@@ -28,12 +29,12 @@ export class MutationBase {
 
   static deserialize(json: string) {
     const parsed = JSON.parse(json);
-    switch (parsed.type as MetadataOperationType) {
-      case MetadataOperationType.DELETE:
+    switch (parsed.type) {
+      case OperationType.DELETE:
         return DeleteMutation.fromJSON(parsed);
-      case MetadataOperationType.INSERT:
+      case OperationType.INSERT:
         return InsertMutation.fromJSON(parsed);
-      case MetadataOperationType.UPDATE:
+      case OperationType.UPDATE:
         return UpdateMutation.fromJSON(parsed);
       default:
         throw new Error("Unknown mutation type");
@@ -79,7 +80,7 @@ export class DeleteMutation
 
   toJSON() {
     return {
-      type: MetadataOperationType.DELETE,
+      type: OperationType.DELETE,
       table: this._table.toJSON(),
       where: this._where.map((condition) => condition.toJSON()),
     };
@@ -134,7 +135,7 @@ export class InsertMutation
 
   toJSON() {
     return {
-      type: MetadataOperationType.INSERT,
+      type: OperationType.INSERT,
       table: this._table.toJSON(),
       values: this._values,
     };
@@ -202,7 +203,7 @@ export class UpdateMutation
 
   toJSON() {
     return {
-      type: MetadataOperationType.UPDATE,
+      type: OperationType.UPDATE,
       table: this._table.toJSON(),
       values: this._values,
       where: this._where.map((condition) => condition.toJSON()),

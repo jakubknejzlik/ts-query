@@ -15,6 +15,14 @@ export enum MetadataOperationType {
   CREATE_TABLE_AS = "ctas",
   CREATE_VIEW_AS = "cvas",
 }
+export enum OperationType {
+  SELECT = "SelectQuery",
+  INSERT = "InsertMutation",
+  UPDATE = "UpdateMutation",
+  DELETE = "DeleteMutation",
+  CREATE_TABLE_AS = "ctas",
+  CREATE_VIEW_AS = "cvas",
+}
 
 export interface IMetadata {
   getTableNames(): string[];

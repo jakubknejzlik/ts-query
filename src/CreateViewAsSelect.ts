@@ -1,11 +1,12 @@
-import { SelectQuery } from "./Query";
 import { ISQLFlavor } from "./Flavor";
+import { SelectQuery } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
   ISerializable,
   MetadataOperationType,
+  OperationType,
 } from "./interfaces";
 
 export class CreateViewAsSelect
@@ -46,7 +47,7 @@ export class CreateViewAsSelect
 
   toJSON() {
     return {
-      type: MetadataOperationType.CREATE_VIEW_AS,
+      type: OperationType.CREATE_VIEW_AS,
       select: this._select.toJSON(),
       viewName: this._viewName,
       orReplace: this._orReplace,
