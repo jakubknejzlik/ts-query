@@ -31,13 +31,16 @@ describe("CreateViewAsSelect", () => {
   });
 
   it("should serialize and deserialize correctly", () => {
-    const cvas = Q.createTableAs(viewName, initialSelectQuery);
+    const cvas = Q.createViewAs(viewName, initialSelectQuery);
+    const cvasReplace = Q.createOrReplaceViewAs(viewName, initialSelectQuery);
     const serialized = cvas.serialize();
     const deserialized = Q.deserialize(serialized);
-
     expect(deserialized.toSQL(new MySQLFlavor())).toEqual(
       cvas.toSQL(new MySQLFlavor())
     );
+    expect(
+      Q.deserialize(cvasReplace.serialize()).toSQL(new MySQLFlavor())
+    ).toEqual(cvasReplace.toSQL(new MySQLFlavor()));
   });
 
   it("should fetch table names correctly", () => {

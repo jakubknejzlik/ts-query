@@ -13,7 +13,7 @@ export enum MetadataOperationType {
   UPDATE = "Update",
   DELETE = "Delete",
   CREATE_TABLE_AS = "CTAS",
-  CREATE_VIEW_AS = "CTAS",
+  CREATE_VIEW_AS = "CVAS",
 }
 
 export interface IMetadata {
