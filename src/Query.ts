@@ -1,4 +1,6 @@
 import { Condition } from "./Condition";
+import { CreateTableAsSelect } from "./CreateTableAsSelect";
+import { CreateViewAsSelect } from "./CreateViewAsSelect";
 import { Expression, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
@@ -48,7 +50,7 @@ export class Table implements ISequelizable, ISerializable {
   static fromJSON(json: any): Table {
     if (
       typeof json.source === "object" &&
-      json.source["type"] === "SelectQuery"
+      json.source["type"] === MetadataOperationType.SELECT
     ) {
       return new Table(SelectQuery.fromJSON(json.source), json.alias);
     }
@@ -75,7 +77,7 @@ export class QueryBase implements ISequelizable, IMetadata {
   protected _joins: Join[] = [];
 
   public getOperationType(): MetadataOperationType {
-    return "select";
+    return MetadataOperationType.SELECT;
   }
 
   // @ts-ignore
@@ -414,7 +416,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
   toJSON(): any {
     return {
-      type: "SelectQuery",
+      type: MetadataOperationType.SELECT,
       tables: this._tables.map((table) =>
         typeof table === "string" ? table : table.toJSON()
       ),
@@ -474,15 +476,19 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
 const deserialize = (json: string) => {
   try {
     const parsed = JSON.parse(json);
-    switch (parsed.type) {
-      case "SelectQuery":
+    switch (parsed.type as MetadataOperationType) {
+      case MetadataOperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
-      case "DeleteMutation":
+      case MetadataOperationType.DELETE:
         return DeleteMutation.fromJSON(parsed);
-      case "InsertMutation":
+      case MetadataOperationType.INSERT:
         return InsertMutation.fromJSON(parsed);
-      case "UpdateMutation":
+      case MetadataOperationType.UPDATE:
         return UpdateMutation.fromJSON(parsed);
+      case MetadataOperationType.CREATE_TABLE_AS:
+        return CreateTableAsSelect.fromJSON(parsed);
+      case MetadataOperationType.CREATE_VIEW_AS:
+        return CreateViewAsSelect.fromJSON(parsed);
       default:
         throw new Error("Unknown mutation type");
     }
@@ -500,6 +506,12 @@ export const Query = {
   delete: (from: string, alias?: string) => new DeleteMutation(from, alias),
   update: (table: string, alias?: string) => new UpdateMutation(table, alias),
   insert: (into: string) => new InsertMutation(into),
+  createTableAs: (table: string, select: SelectQuery) =>
+    new CreateTableAsSelect(table, select),
+  createViewAs: (table: string, select: SelectQuery) =>
+    new CreateViewAsSelect(table, select),
+  createOrReaplaceViewAs: (table: string, select: SelectQuery) =>
+    new CreateViewAsSelect(table, select, true),
   deserialize,
   flavors,
   expr: Expression.deserialize,

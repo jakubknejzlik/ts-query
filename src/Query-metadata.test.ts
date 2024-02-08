@@ -1,5 +1,6 @@
 import { Q } from "./Query";
 import { Fn } from "./Function";
+import { MetadataOperationType } from "./interfaces";
 
 describe("Query builder metadata", () => {
   it("should return list of tables in simple query", () => {
@@ -59,6 +60,6 @@ describe("Query builder metadata", () => {
   it("should get operation type for query", () => {
     const query = Q.select();
     const operation = query.getOperationType();
-    expect(operation).toEqual("select");
+    expect(operation).toEqual(MetadataOperationType.SELECT);
   });
 });

@@ -28,12 +28,12 @@ export class MutationBase {
 
   static deserialize(json: string) {
     const parsed = JSON.parse(json);
-    switch (parsed.type) {
-      case "DeleteMutation":
+    switch (parsed.type as MetadataOperationType) {
+      case MetadataOperationType.DELETE:
         return DeleteMutation.fromJSON(parsed);
-      case "InsertMutation":
+      case MetadataOperationType.INSERT:
         return InsertMutation.fromJSON(parsed);
-      case "UpdateMutation":
+      case MetadataOperationType.UPDATE:
         return UpdateMutation.fromJSON(parsed);
       default:
         throw new Error("Unknown mutation type");
@@ -48,7 +48,7 @@ export class DeleteMutation
   protected _where: Condition[] = [];
 
   public getOperationType(): MetadataOperationType {
-    return "delete";
+    return MetadataOperationType.DELETE;
   }
 
   public clone(): this {
@@ -79,7 +79,7 @@ export class DeleteMutation
 
   toJSON() {
     return {
-      type: "DeleteMutation",
+      type: MetadataOperationType.DELETE,
       table: this._table.toJSON(),
       where: this._where.map((condition) => condition.toJSON()),
     };
@@ -101,7 +101,7 @@ export class InsertMutation
   protected _values: Record<string, ConditionValue> = {};
 
   public getOperationType(): MetadataOperationType {
-    return "insert";
+    return MetadataOperationType.INSERT;
   }
 
   public clone(): this {
@@ -134,7 +134,7 @@ export class InsertMutation
 
   toJSON() {
     return {
-      type: "InsertMutation",
+      type: MetadataOperationType.INSERT,
       table: this._table.toJSON(),
       values: this._values,
     };
@@ -155,7 +155,7 @@ export class UpdateMutation
   protected _where: Condition[] = [];
 
   public getOperationType(): MetadataOperationType {
-    return "update";
+    return MetadataOperationType.UPDATE;
   }
 
   public clone(): this {
@@ -202,7 +202,7 @@ export class UpdateMutation
 
   toJSON() {
     return {
-      type: "UpdateMutation",
+      type: MetadataOperationType.UPDATE,
       table: this._table.toJSON(),
       values: this._values,
       where: this._where.map((condition) => condition.toJSON()),

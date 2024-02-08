@@ -7,7 +7,15 @@ export interface ISerializable {
   serialize(): string;
 }
 
-export type MetadataOperationType = "select" | "insert" | "update" | "delete";
+export enum MetadataOperationType {
+  SELECT = "Select",
+  INSERT = "Insert",
+  UPDATE = "Update",
+  DELETE = "Delete",
+  CREATE_TABLE_AS = "CTAS",
+  CREATE_VIEW_AS = "CTAS",
+}
+
 export interface IMetadata {
   getTableNames(): string[];
   getOperationType(): MetadataOperationType;
