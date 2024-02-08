@@ -8,12 +8,12 @@ export interface ISerializable {
 }
 
 export enum MetadataOperationType {
-  SELECT = "Select",
-  INSERT = "Insert",
-  UPDATE = "Update",
-  DELETE = "Delete",
-  CREATE_TABLE_AS = "CTAS",
-  CREATE_VIEW_AS = "CVAS",
+  SELECT = "select",
+  INSERT = "insert",
+  UPDATE = "update",
+  DELETE = "delete",
+  CREATE_TABLE_AS = "ctas",
+  CREATE_VIEW_AS = "cvas",
 }
 
 export interface IMetadata {
