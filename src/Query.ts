@@ -510,7 +510,7 @@ export const Query = {
     new CreateTableAsSelect(table, select),
   createViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select),
-  createOrReaplaceViewAs: (table: string, select: SelectQuery) =>
+  createOrReplaceViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select, true),
   deserialize,
   flavors,

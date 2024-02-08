@@ -11,7 +11,7 @@ describe("CreateViewAsSelect", () => {
   const viewName = "user_view";
 
   it("should clone itself correctly", () => {
-    const cvas = Q.createOrReaplaceViewAs(viewName, initialSelectQuery);
+    const cvas = Q.createOrReplaceViewAs(viewName, initialSelectQuery);
     const clone = cvas.clone();
 
     expect(clone).not.toBe(cvas);
@@ -19,7 +19,7 @@ describe("CreateViewAsSelect", () => {
   });
 
   it("should generate the correct SQL with OR REPLACE", () => {
-    const cvas = Q.createOrReaplaceViewAs(viewName, initialSelectQuery);
+    const cvas = Q.createOrReplaceViewAs(viewName, initialSelectQuery);
     const expectedSQL = `CREATE OR REPLACE VIEW \`${viewName}\` AS SELECT * FROM \`users\` AS \`u\` WHERE \`u\`.\`id\` = 1`;
     expect(cvas.toSQL(new MySQLFlavor())).toBe(expectedSQL);
   });
