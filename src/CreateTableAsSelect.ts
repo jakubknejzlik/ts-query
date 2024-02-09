@@ -47,4 +47,11 @@ export class CreateTableAsSelect
   static fromJSON({ tableName, select }: any): CreateTableAsSelect {
     return new CreateTableAsSelect(tableName, SelectQuery.fromJSON(select));
   }
+
+  getTableName(): string {
+    return this._tableName;
+  }
+  getSelect(): SelectQuery {
+    return this._select;
+  }
 }

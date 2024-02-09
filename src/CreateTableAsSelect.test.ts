@@ -46,4 +46,10 @@ describe("CreateTableAsSelect", () => {
       MetadataOperationType.CREATE_TABLE_AS
     );
   });
+
+  it("should return correct values from accessorts", () => {
+    const cvas = Q.createTableAs(tableName, initialSelectQuery);
+    expect(cvas.getTableName()).toEqual(tableName);
+    expect(cvas.getSelect().toSQL()).toEqual(initialSelectQuery.toSQL());
+  });
 });

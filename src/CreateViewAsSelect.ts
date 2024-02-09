@@ -61,4 +61,11 @@ export class CreateViewAsSelect
       orReplace
     );
   }
+
+  getViewName(): string {
+    return this._viewName;
+  }
+  getSelect(): SelectQuery {
+    return this._select;
+  }
 }

@@ -54,4 +54,10 @@ describe("CreateViewAsSelect", () => {
       MetadataOperationType.CREATE_VIEW_AS
     );
   });
+
+  it("should return correct values from accessorts", () => {
+    const cvas = Q.createViewAs(viewName, initialSelectQuery);
+    expect(cvas.getViewName()).toEqual(viewName);
+    expect(cvas.getSelect().toSQL()).toEqual(initialSelectQuery.toSQL());
+  });
 });
