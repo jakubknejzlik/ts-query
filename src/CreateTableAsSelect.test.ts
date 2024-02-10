@@ -1,8 +1,7 @@
-import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { Cond } from "./Condition";
 import { Q } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
-import { MetadataOperationType } from "./interfaces";
+import { IMetadataOperationType } from "./interfaces";
 
 describe("CreateTableAsSelect", () => {
   const initialSelectQuery = Q.select()
@@ -43,7 +42,7 @@ describe("CreateTableAsSelect", () => {
   it("should return correct operation type", () => {
     const ctas = Q.createTableAs(tableName, initialSelectQuery);
     expect(ctas.getOperationType()).toEqual(
-      MetadataOperationType.CREATE_TABLE_AS
+      IMetadataOperationType.CREATE_TABLE_AS
     );
   });
 

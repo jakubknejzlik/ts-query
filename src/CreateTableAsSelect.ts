@@ -5,7 +5,7 @@ import {
   IMetadata,
   ISequelizable,
   ISerializable,
-  MetadataOperationType,
+  IMetadataOperationType,
   OperationType,
 } from "./interfaces";
 
@@ -18,8 +18,8 @@ export class CreateTableAsSelect
     return new (this.constructor as any)(this._tableName, this._select.clone());
   }
 
-  getOperationType(): MetadataOperationType {
-    return MetadataOperationType.CREATE_TABLE_AS;
+  getOperationType(): IMetadataOperationType {
+    return IMetadataOperationType.CREATE_TABLE_AS;
   }
 
   getTableNames(): string[] {

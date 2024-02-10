@@ -6,7 +6,7 @@ import {
   IMetadata,
   ISequelizable,
   ISerializable,
-  MetadataOperationType,
+  IMetadataOperationType,
   OperationType,
 } from "./interfaces";
 
@@ -48,8 +48,8 @@ export class DeleteMutation
 {
   protected _where: Condition[] = [];
 
-  public getOperationType(): MetadataOperationType {
-    return MetadataOperationType.DELETE;
+  public getOperationType(): IMetadataOperationType {
+    return IMetadataOperationType.DELETE;
   }
 
   public clone(): this {
@@ -101,8 +101,8 @@ export class InsertMutation
 {
   protected _values: Record<string, ConditionValue> = {};
 
-  public getOperationType(): MetadataOperationType {
-    return MetadataOperationType.INSERT;
+  public getOperationType(): IMetadataOperationType {
+    return IMetadataOperationType.INSERT;
   }
 
   public clone(): this {
@@ -155,8 +155,8 @@ export class UpdateMutation
   protected _values: Record<string, ConditionValue> = {};
   protected _where: Condition[] = [];
 
-  public getOperationType(): MetadataOperationType {
-    return MetadataOperationType.UPDATE;
+  public getOperationType(): IMetadataOperationType {
+    return IMetadataOperationType.UPDATE;
   }
 
   public clone(): this {

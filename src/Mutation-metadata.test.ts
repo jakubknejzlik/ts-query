@@ -1,5 +1,5 @@
 import { Q } from "./Query";
-import { MetadataOperationType } from "./interfaces";
+import { IMetadataOperationType } from "./interfaces";
 
 describe("Query builder metadata", () => {
   it("should return list of tables in insert query", () => {
@@ -19,13 +19,13 @@ describe("Query builder metadata", () => {
   });
   it("should get operation type", () => {
     expect(Q.insert("table").getOperationType()).toEqual(
-      MetadataOperationType.INSERT
+      IMetadataOperationType.INSERT
     );
     expect(Q.update("table").getOperationType()).toEqual(
-      MetadataOperationType.UPDATE
+      IMetadataOperationType.UPDATE
     );
     expect(Q.delete("table").getOperationType()).toEqual(
-      MetadataOperationType.DELETE
+      IMetadataOperationType.DELETE
     );
   });
 });
