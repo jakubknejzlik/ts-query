@@ -11,7 +11,7 @@ describe("Mutation builder SQL", () => {
   it("should return SQL for insert", () => {
     expect(
       Q.insert("users")
-        .values({ name: "John Doe", age: 42, isActive: true })
+        .values([{ name: "John Doe", age: 42, isActive: true }])
         .toSQL()
     ).toEqual(
       'INSERT INTO `users` (`name`, `age`, `isActive`) VALUES ("John Doe", 42, true)'
