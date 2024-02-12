@@ -1,7 +1,7 @@
 import { Cond } from "./Condition";
 import { Q } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
-import { IMetadataOperationType } from "./interfaces";
+import { MetadataOperationType } from "./interfaces";
 
 describe("CreateViewAsSelect", () => {
   const initialSelectQuery = Q.select()
@@ -50,7 +50,7 @@ describe("CreateViewAsSelect", () => {
   it("should return correct operation type", () => {
     const cvas = Q.createViewAs(viewName, initialSelectQuery);
     expect(cvas.getOperationType()).toEqual(
-      IMetadataOperationType.CREATE_VIEW_AS
+      MetadataOperationType.CREATE_VIEW_AS
     );
   });
 

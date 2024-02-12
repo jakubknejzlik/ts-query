@@ -10,7 +10,7 @@ import {
   IMetadata,
   ISequelizable,
   ISerializable,
-  IMetadataOperationType,
+  MetadataOperationType,
   OperationType,
 } from "./interfaces";
 import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
@@ -77,8 +77,8 @@ export class QueryBase implements ISequelizable, IMetadata {
   protected _tables: Table[] = [];
   protected _joins: Join[] = [];
 
-  public getOperationType(): IMetadataOperationType {
-    return IMetadataOperationType.SELECT;
+  public getOperationType(): MetadataOperationType {
+    return MetadataOperationType.SELECT;
   }
 
   // @ts-ignore

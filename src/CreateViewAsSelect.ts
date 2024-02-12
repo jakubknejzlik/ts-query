@@ -5,7 +5,7 @@ import {
   IMetadata,
   ISequelizable,
   ISerializable,
-  IMetadataOperationType,
+  MetadataOperationType,
   OperationType,
 } from "./interfaces";
 
@@ -26,8 +26,8 @@ export class CreateViewAsSelect
     );
   }
 
-  getOperationType(): IMetadataOperationType {
-    return IMetadataOperationType.CREATE_VIEW_AS;
+  getOperationType(): MetadataOperationType {
+    return MetadataOperationType.CREATE_VIEW_AS;
   }
 
   getTableNames(): string[] {
