@@ -1,54 +1,49 @@
 import dayjs, { Dayjs } from "dayjs";
-import { Condition } from "./Condition";
-import { ISQLFlavor } from "./Flavor";
-import { MySQLFlavor } from "./flavors/mysql";
-import { Expression, ExpressionValue } from "./Expression";
+import { Cond, Condition } from "./Condition";
+import {
+  Expression,
+  ExpressionValue,
+  FunctionExpression,
+  OperationExpression,
+} from "./Expression";
 import { Q } from "./Query";
+import { MySQLFlavor } from "./flavors/mysql";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
-const defaultFlavor = new MySQLFlavor();
 
 export const Function = {
   add: (...columns: ExpressionValue[]) => {
-    return Q.expr(
-      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" + ")})`
-    );
+    return new OperationExpression("+", ...columns);
   },
   subtract: (...columns: ExpressionValue[]) => {
-    return Q.expr(
-      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" - ")})`
-    );
+    return new OperationExpression("-", ...columns);
   },
   divide: (...columns: ExpressionValue[]) => {
-    return Q.expr(
-      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" / ")})`
-    );
+    return new OperationExpression("/", ...columns);
   },
   multiply: (...columns: ExpressionValue[]) => {
-    return Q.expr(
-      `(${columns.map((v) => Expression.escapeExpressionValue(v)).join(" * ")})`
-    );
+    return new OperationExpression("*", ...columns);
   },
   sum: (column: ExpressionValue) => {
-    return Q.expr(`SUM(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("SUM", column);
   },
   year: (column: ExpressionValue) => {
-    return Q.expr(`YEAR(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("YEAR", column);
   },
   month: (column: ExpressionValue) => {
-    return Q.expr(`MONTH(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("MONTH", column);
   },
   min: (column: ExpressionValue) => {
-    return Q.expr(`MIN(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("MIN", column);
   },
   max: (column: ExpressionValue) => {
-    return Q.expr(`MAX(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("MAX", column);
   },
   avg: (column: ExpressionValue) => {
-    return Q.expr(`AVG(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("AVG", column);
   },
   abs: (column: ExpressionValue) => {
-    return Q.expr(`ABS(${Expression.escapeExpressionValue(column)})`);
+    return new FunctionExpression("ABS", column);
   },
   dateDiff: (
     interval: "year" | "month" | "day",
@@ -94,23 +89,14 @@ export const Function = {
     );
   },
   concat: (...values: ExpressionValue[]) => {
-    return Q.expr(
-      `CONCAT(${values
-        .map((x) => Expression.escapeExpressionValue(x))
-        .join(",")})`
-    );
+    return new FunctionExpression("CONCAT", ...values);
   },
   if: (
     condition: Condition,
     trueValue: ExpressionValue,
-    falseValue: ExpressionValue,
-    flavor: ISQLFlavor = defaultFlavor
+    falseValue: ExpressionValue
   ) => {
-    return Q.expr(
-      `IF(${condition.toSQL(flavor)},${Expression.escapeExpressionValue(
-        trueValue
-      )},${Expression.escapeExpressionValue(falseValue)})`
-    );
+    return new FunctionExpression("IF", condition, trueValue, falseValue);
   },
   dateRangeSumField: ({
     dateColumn,
@@ -122,12 +108,20 @@ export const Function = {
     valueColumn: string;
     start: Dayjs | string;
     end: Dayjs | string;
-  }) =>
-    Q.expr(
-      `SUM(IF(${dateColumn} BETWEEN '${formatDayjs(
-        dayjs(start)
-      )}' AND '${formatDayjs(dayjs(end))}',${valueColumn},0))`
-    ),
+  }) => {
+    return new FunctionExpression(
+      "SUM",
+      new FunctionExpression(
+        "IF",
+        Cond.between(dateColumn, [
+          formatDayjs(dayjs(start)),
+          formatDayjs(dayjs(end)),
+        ]),
+        valueColumn,
+        Q.value(0)
+      )
+    );
+  },
 
   priceCurrentAndPreviousDiffField: ({
     thisYearColumn,

@@ -1,4 +1,4 @@
-import { Expression } from "./Expression";
+import { Expression, ExpressionBase } from "./Expression";
 import { Q } from "./Query";
 
 const flavor = Q.flavors.mysql;
@@ -32,32 +32,32 @@ describe("Expression", () => {
 describe("Expression serialization", () => {
   it("should serialize/deserialize expressions", () => {
     const a = Q.expr("foo").serialize();
-    expect(Expression.deserialize(a).toSQL(flavor)).toEqual(
+    expect(ExpressionBase.deserialize(a).toSQL(flavor)).toEqual(
       Q.expr("foo").toSQL(flavor)
     );
 
     expect(Q.expr(Expression.escapeColumn("foo")).toSQL(flavor)).toEqual(
-      Expression.deserialize(Expression.escapeColumn("foo")).toSQL(flavor)
+      ExpressionBase.deserialize(Expression.escapeColumn("foo")).toSQL(flavor)
     );
 
     expect(Q.expr(Expression.escapeString("blah")).toSQL(flavor)).toEqual(
-      Expression.deserialize(Expression.escapeString("blah")).toSQL(flavor)
+      ExpressionBase.deserialize(Expression.escapeString("blah")).toSQL(flavor)
     );
   });
 
   it("should serialize/deserialize expressions multiple times", () => {
     const expr = Q.expr("foo");
     expect(
-      Expression.deserialize(
-        Expression.deserialize(expr.serialize()).serialize()
+      ExpressionBase.deserialize(
+        ExpressionBase.deserialize(expr.serialize()).serialize()
       ).toSQL(flavor)
     ).toEqual(expr.toSQL(flavor));
 
     const expr2 = Q.exprValue(123);
     expect(
-      Expression.deserialize(
-        Expression.deserializeValue(
-          Expression.deserializeValue(expr2.serialize()).serialize()
+      ExpressionBase.deserialize(
+        ExpressionBase.deserializeValue(
+          ExpressionBase.deserializeValue(expr2.serialize()).serialize()
         ).serialize()
       ).toSQL(flavor)
     ).toEqual(expr2.toSQL(flavor));

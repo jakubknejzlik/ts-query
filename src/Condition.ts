@@ -1,15 +1,25 @@
 import { Dayjs } from "dayjs";
-import { Expression, ExpressionValue, ValueExpression } from "./Expression";
+import {
+  Expression,
+  ExpressionBase,
+  ExpressionValue,
+  ValueExpression,
+} from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q } from "./Query";
+import { ISequelizable, ISerializable } from "./interfaces";
 
-export interface Condition {
-  toSQL(flavor: ISQLFlavor): string;
-  toJSON(): any;
-}
-
-export namespace Condition {
-  export function fromJSON(json: any): Condition {
+export class Condition implements ISequelizable, ISerializable {
+  toSQL(flavor: ISQLFlavor): string {
+    throw new Error("Method not implemented.");
+  }
+  toJSON(): any {
+    throw new Error("Method not implemented.");
+  }
+  serialize(): string {
+    return JSON.stringify(this.toJSON());
+  }
+  static fromJSON(json: any): Condition {
     switch (json.type) {
       case "BinaryCondition":
         return BinaryCondition.fromJSON(json);
@@ -28,17 +38,27 @@ export namespace Condition {
       case "ColumnComparisonCondition":
         return ColumnComparisonCondition.fromJSON(json);
       default:
-        throw new Error(`Unknown condition type: ${json.type}`);
+        throw new Error(
+          `Unknown condition type: ${json.type} (${JSON.stringify(json)})`
+        );
     }
+  }
+  static deserialize(value: Condition): Condition {
+    return value;
+    // console.log("??", value);
+    // if (typeof value === "string") {
+    //   return this.fromJSON(JSON.parse(value));
+    // }
+    // return this.fromJSON(value);
   }
 }
 
 export type ConditionValue = string | number | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
-class BinaryCondition implements Condition {
-  key: Expression;
-  value: Expression;
+class BinaryCondition extends Condition {
+  key: ExpressionBase;
+  value: ExpressionBase;
   operator: Operator;
 
   constructor(
@@ -46,8 +66,9 @@ class BinaryCondition implements Condition {
     value: ExpressionValue,
     operator: Operator
   ) {
+    super();
     this.key = Q.expr(key);
-    this.value = Q.exprValue(value);
+    this.value = Q.value(value);
     this.operator = operator;
   }
 
@@ -69,18 +90,19 @@ class BinaryCondition implements Condition {
 
   static fromJSON(json: any): BinaryCondition {
     return new BinaryCondition(
-      Expression.deserialize(json.key),
-      Expression.deserializeValue(json.value),
+      ExpressionBase.deserialize(json.key),
+      ExpressionBase.deserializeValue(json.value),
       json.operator
     );
   }
 }
 
-class LogicalCondition implements Condition {
+class LogicalCondition extends Condition {
   conditions: Condition[];
   operator: "AND" | "OR";
 
   constructor(conditions: Condition[], operator: "AND" | "OR") {
+    super();
     this.conditions = conditions;
     this.operator = operator;
   }
@@ -106,16 +128,17 @@ class LogicalCondition implements Condition {
   }
 }
 
-class BetweenCondition implements Condition {
-  key: Expression;
-  from: Expression;
-  to: Expression;
+class BetweenCondition extends Condition {
+  key: ExpressionBase;
+  from: ExpressionBase;
+  to: ExpressionBase;
 
   constructor(
     key: ExpressionValue,
     from: ExpressionValue,
     to: ExpressionValue
   ) {
+    super();
     this.key = Q.expr(key);
     this.from = Q.expr(from);
     this.to = Q.expr(to);
@@ -139,18 +162,19 @@ class BetweenCondition implements Condition {
 
   static fromJSON(json: any): BetweenCondition {
     return new BetweenCondition(
-      Expression.deserialize(json.key),
-      Expression.deserializeValue(json.from),
-      Expression.deserializeValue(json.to)
+      ExpressionBase.deserialize(json.key),
+      ExpressionBase.deserializeValue(json.from),
+      ExpressionBase.deserializeValue(json.to)
     );
   }
 }
 
-class InCondition implements Condition {
-  key: Expression;
-  values: Expression[];
+class InCondition extends Condition {
+  key: ExpressionBase;
+  values: ExpressionBase[];
 
   constructor(key: ExpressionValue, values: ExpressionValue[]) {
+    super();
     this.key = Q.expr(key);
     this.values = values.map((v) => Q.exprValue(v));
   }
@@ -172,17 +196,18 @@ class InCondition implements Condition {
 
   static fromJSON(json: any): InCondition {
     return new InCondition(
-      Expression.deserialize(json.key),
-      json.values.map(Expression.deserializeValue)
+      ExpressionBase.deserialize(json.key),
+      json.values.map(ExpressionBase.deserializeValue)
     );
   }
 }
 
-class NotInCondition implements Condition {
-  key: Expression;
-  values: Expression[];
+class NotInCondition extends Condition {
+  key: ExpressionBase;
+  values: ExpressionBase[];
 
   constructor(key: ExpressionValue, values: ExpressionValue[]) {
+    super();
     this.key = Q.expr(key);
     this.values = values.map((v) => Q.expr(v));
   }
@@ -204,17 +229,18 @@ class NotInCondition implements Condition {
 
   static fromJSON(json: any): NotInCondition {
     return new NotInCondition(
-      Expression.deserialize(json.key),
-      json.values.map(Expression.deserializeValue)
+      ExpressionBase.deserialize(json.key),
+      json.values.map(ExpressionBase.deserializeValue)
     );
   }
 }
 
-class NullCondition implements Condition {
-  key: Expression;
+class NullCondition extends Condition {
+  key: ExpressionBase;
   isNull: boolean;
 
   constructor(key: ExpressionValue, isNull: boolean) {
+    super();
     this.key = Q.expr(key);
     this.isNull = isNull;
   }
@@ -233,16 +259,17 @@ class NullCondition implements Condition {
   }
 
   static fromJSON(json: any): NullCondition {
-    return new NullCondition(Expression.deserialize(json.key), json.isNull);
+    return new NullCondition(ExpressionBase.deserialize(json.key), json.isNull);
   }
 }
 
-class LikeCondition implements Condition {
-  key: Expression;
+class LikeCondition extends Condition {
+  key: ExpressionBase;
   pattern: string;
   isLike: boolean;
 
   constructor(key: ExpressionValue, pattern: string, isLike: boolean) {
+    super();
     this.key = Q.expr(key);
     this.pattern = pattern;
     this.isLike = isLike;
@@ -266,16 +293,16 @@ class LikeCondition implements Condition {
 
   static fromJSON(json: any): LikeCondition {
     return new LikeCondition(
-      Expression.deserialize(json.key),
+      ExpressionBase.deserialize(json.key),
       json.pattern,
       json.isLike
     );
   }
 }
 
-class ColumnComparisonCondition implements Condition {
-  leftKey: Expression;
-  rightKey: Expression;
+class ColumnComparisonCondition extends Condition {
+  leftKey: ExpressionBase;
+  rightKey: ExpressionBase;
   operator: Operator;
 
   constructor(
@@ -283,6 +310,7 @@ class ColumnComparisonCondition implements Condition {
     rightKey: ExpressionValue,
     operator: Operator
   ) {
+    super();
     this.leftKey = Q.expr(leftKey);
     this.rightKey = Q.expr(rightKey);
     this.operator = operator;
@@ -306,8 +334,8 @@ class ColumnComparisonCondition implements Condition {
 
   static fromJSON(json: any): ColumnComparisonCondition {
     return new ColumnComparisonCondition(
-      Expression.deserialize(json.leftKey),
-      Expression.deserialize(json.rightKey),
+      ExpressionBase.deserialize(json.leftKey),
+      ExpressionBase.deserialize(json.rightKey),
       json.operator
     );
   }

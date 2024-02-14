@@ -5,7 +5,11 @@ export { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 export { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 export { MySQLFlavor } from "./flavors/mysql";
 
-export { Cond, Condition, type ConditionValue } from "./Condition";
+export {
+  Cond,
+  ICondition as Condition,
+  type ConditionValue,
+} from "./Condition";
 export { Fn, Function } from "./Function";
 export { Q, Query, SelectQuery } from "./Query";
 export {

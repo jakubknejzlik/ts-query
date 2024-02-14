@@ -1,7 +1,12 @@
 import { Condition } from "./Condition";
 import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { CreateViewAsSelect } from "./CreateViewAsSelect";
-import { Expression, ExpressionValue } from "./Expression";
+import {
+  Expression,
+  ExpressionBase,
+  ExpressionRawValue,
+  ExpressionValue,
+} from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
@@ -208,7 +213,7 @@ interface SelectField {
 }
 
 interface Order {
-  field: Expression;
+  field: ExpressionBase;
   direction: "ASC" | "DESC";
 }
 
@@ -277,7 +282,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   protected _limit?: number;
   protected _offset?: number;
   protected _orderBy: Order[] = [];
-  protected _groupBy: Expression[] = [];
+  protected _groupBy: ExpressionBase[] = [];
   protected _unionQueries: { query: SelectQuery; type: UnionType }[] = [];
 
   public clone(): this {
@@ -338,7 +343,10 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
   orderBy(field: ExpressionValue, direction: "ASC" | "DESC" = "ASC"): this {
     const clone = this.clone();
-    clone._orderBy.push({ field: Expression.deserialize(field), direction });
+    clone._orderBy.push({
+      field: Expression.deserialize(field),
+      direction,
+    });
     return clone;
   }
   removeOrderBy(): this {
@@ -346,7 +354,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     clone._orderBy = [];
     return clone;
   }
-  public getGroupBy(): Expression[] {
+  public getGroupBy(): ExpressionBase[] {
     return this._groupBy;
   }
   groupBy(...field: ExpressionValue[]): this {
@@ -515,8 +523,10 @@ export const Query = {
     new CreateViewAsSelect(table, select, true),
   deserialize,
   flavors,
-  expr: Expression.deserialize,
-  exprValue: Expression.deserializeValue,
+  expr: (val: ExpressionValue) => ExpressionBase.deserialize(val),
+  exprValue: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
+  value: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
+  column: (col: ExpressionRawValue) => Expression.escapeColumn(col),
   S: (literals: string | readonly string[]) => {
     return Fn.string(`${literals}`);
   },

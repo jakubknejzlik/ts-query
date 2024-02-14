@@ -40,5 +40,35 @@ describe("Expression", () => {
     expect(
       Fn.if(Cond.equal("foo_blah", 123), "aa", Q.expr(-123)).toSQL(flavor)
     ).toEqual("IF(`foo_blah` = 123,`aa`,-123)");
+    expect(
+      Fn.dateRangeSumField({
+        dateColumn: "tax_date",
+        valueColumn: "amount",
+        start: "2020-01-01",
+        end: "2020-01-31",
+      }).toSQL(flavor)
+    ).toEqual(
+      'SUM(IF(`tax_date` BETWEEN "2020-01-01" AND "2020-01-31",`amount`,0))'
+    );
+  });
+  it("should support serialization for functions", () => {
+    const serialized =
+      '{"type":"SelectQuery","tables":[],"unionQueries":[],"joins":[],"fields":[{"name":"SUM(YEAR(#foo#))"}],"where":[],"having":[],"orderBy":[],"groupBy":[]}';
+
+    const fn = Q.select().addField(Fn.sum(Fn.year("foo")));
+    const fn2 = Q.deserialize(serialized);
+    // console.log("serialized test:", JSON.stringify(fn.serialize()));
+
+    expect(fn2.toSQL(flavor)).toEqual(fn.toSQL(flavor));
+  });
+  it("should support serialization for operations", () => {
+    const serialized =
+      '{"type":"SelectQuery","tables":[],"unionQueries":[],"joins":[],"fields":[{"name":"((#foo# / #blah#) + #xyz#)"}],"where":[],"having":[],"orderBy":[],"groupBy":[]}';
+
+    const fn = Q.select().addField(Fn.add(Fn.divide("foo", "blah"), "xyz"));
+    const fn2 = Q.deserialize(serialized);
+    // console.log("serialized test:", JSON.stringify(fn.serialize()));
+
+    expect(fn2.toSQL(flavor)).toEqual(fn.toSQL(flavor));
   });
 });

@@ -1,7 +1,11 @@
 import { isDayjs } from "dayjs";
 import { ConditionValue } from "../Condition";
+import {
+  Expression,
+  FunctionExpression,
+  OperationExpression,
+} from "../Expression";
 import { ISQLFlavor } from "../Flavor";
-import { SelectQuery } from "../Query";
 
 export class MySQLFlavor implements ISQLFlavor {
   protected columnQuotes = "`";
@@ -59,5 +63,20 @@ export class MySQLFlavor implements ISQLFlavor {
       str += ` OFFSET ${offset}`;
     }
     return str;
+  }
+  escapeFunction(fn: FunctionExpression): string {
+    const args = fn.value
+      .map((x) => Expression.deserialize(x).toSQL(this))
+      .join(",");
+    return `${fn.name}(${args})`;
+  }
+  escapeOperation(fn: OperationExpression): string {
+    return (
+      "(" +
+      fn.value
+        .map((x) => Expression.deserialize(x).toSQL(this))
+        .join(` ${fn.operation} `) +
+      ")"
+    );
   }
 }
