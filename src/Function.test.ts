@@ -106,7 +106,7 @@ describe("Expression", () => {
       "blah"
     );
     expect(fn4.toSQL(flavor)).toEqual(
-      "SELECT IF((SUM(`price_this_year`) = 0 AND AVG(`price_last_year`) = 0),`0`,IF(AVG(`price_last_year`) = 0,NULL,IF(SUM(`price_this_year`) = 0,-1,((SUM(`price_this_year`) - AVG(`price_last_year`)) / AVG(`price_last_year`))))) AS `blah` "
+      "SELECT IF((SUM(`price_this_year`) = 0 AND AVG(`price_last_year`) = 0),+0,IF(AVG(`price_last_year`) = 0,NULL,IF(SUM(`price_this_year`) = 0,-1,((SUM(`price_this_year`) - AVG(`price_last_year`)) / AVG(`price_last_year`))))) AS `blah` "
     );
     expect(Q.deserialize(fn4.serialize()).toSQL(flavor)).toEqual(
       fn4.toSQL(flavor)

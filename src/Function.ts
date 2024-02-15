@@ -134,13 +134,13 @@ export const Function = {
   }) =>
     ifFn(
       Cond.and([Cond.equal(thisYearColumn, 0), Cond.equal(lastYearColumn, 0)]),
-      0,
+      Q.expr(`+0`),
       ifFn(
         Cond.equal(lastYearColumn, 0),
         Q.expr("NULL"),
         ifFn(
           Cond.equal(thisYearColumn, 0),
-          -1,
+          Q.expr(`-1`),
           new OperationExpression(
             "/",
             new OperationExpression("-", thisYearColumn, lastYearColumn),
