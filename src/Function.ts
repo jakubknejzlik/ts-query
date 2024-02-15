@@ -11,6 +11,14 @@ import { MySQLFlavor } from "./flavors/mysql";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 
+const ifFn = (
+  condition: Condition,
+  trueValue: ExpressionValue,
+  falseValue: ExpressionValue
+) => {
+  return new FunctionExpression("IF", condition, trueValue, falseValue);
+};
+
 export const Function = {
   add: (...columns: ExpressionValue[]) => {
     return new OperationExpression("+", ...columns);
@@ -91,13 +99,7 @@ export const Function = {
   concat: (...values: ExpressionValue[]) => {
     return new FunctionExpression("CONCAT", ...values);
   },
-  if: (
-    condition: Condition,
-    trueValue: ExpressionValue,
-    falseValue: ExpressionValue
-  ) => {
-    return new FunctionExpression("IF", condition, trueValue, falseValue);
-  },
+  if: ifFn,
   dateRangeSumField: ({
     dateColumn,
     valueColumn,
@@ -130,25 +132,22 @@ export const Function = {
     thisYearColumn: ExpressionValue;
     lastYearColumn: ExpressionValue;
   }) =>
-    Q.expr(
-      "CASE " +
-        `WHEN ${Expression.escapeExpressionValue(
-          thisYearColumn
-        )} = 0 AND ${Expression.escapeExpressionValue(
-          lastYearColumn
-        )} = 0 THEN 0 ` +
-        `WHEN ${Expression.escapeExpressionValue(
-          lastYearColumn
-        )} = 0 THEN null ` +
-        `WHEN ${Expression.escapeExpressionValue(
-          thisYearColumn
-        )} = 0 THEN -1 ` +
-        `ELSE (${Expression.escapeExpressionValue(
-          thisYearColumn
-        )} - ${Expression.escapeExpressionValue(
-          lastYearColumn
-        )}) / ${Expression.escapeExpressionValue(lastYearColumn)} ` +
-        "END"
+    ifFn(
+      Cond.and([Cond.equal(thisYearColumn, 0), Cond.equal(lastYearColumn, 0)]),
+      0,
+      ifFn(
+        Cond.equal(lastYearColumn, 0),
+        Q.expr("NULL"),
+        ifFn(
+          Cond.equal(thisYearColumn, 0),
+          -1,
+          new OperationExpression(
+            "/",
+            new OperationExpression("-", thisYearColumn, lastYearColumn),
+            lastYearColumn
+          )
+        )
+      )
     ),
 };
 
