@@ -7,7 +7,7 @@ const preview = {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
-
+    },
   },
 };
 
