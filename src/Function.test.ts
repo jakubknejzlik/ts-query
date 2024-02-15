@@ -16,13 +16,17 @@ describe("Expression", () => {
       "(`foo` * `blah`)"
     );
     expect(Fn.divide("foo", "blah").toSQL(flavor)).toEqual("(`foo` / `blah`)");
-    expect(Fn.ifnull("foo", `123`).toSQL(flavor)).toEqual("IFNULL(`foo`,123)");
+    expect(Fn.ifnull("foo", Q.value(123)).toSQL(flavor)).toEqual(
+      "IFNULL(`foo`,123)"
+    );
     expect(Fn.ifnull("foo", Q.S`123`).toSQL(flavor)).toEqual(
       'IFNULL(`foo`,"123")'
     );
     expect(
-      Fn.dateDiff("year", "2024-01-01", "2025-01-01").toSQL(flavor)
-    ).toEqual("YEAR(`2024-01-01`) - YEAR(`2025-01-01`)");
+      Fn.dateDiff("year", Q.value("2024-01-01"), Q.value("2025-01-01")).toSQL(
+        flavor
+      )
+    ).toEqual('(YEAR("2024-01-01") - YEAR("2025-01-01"))');
   });
   it("should support value composition", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
@@ -110,6 +114,29 @@ describe("Expression", () => {
     );
     expect(Q.deserialize(fn4.serialize()).toSQL(flavor)).toEqual(
       fn4.toSQL(flavor)
+    );
+  });
+  it("should support serialization for ifnull", () => {
+    const fn = Q.select().addField(
+      Fn.ifnull(Fn.if(Cond.equal("foo_blah", 123), "aa", Q.value(123)), "blah"),
+      "blah"
+    );
+    expect(fn.toSQL(flavor)).toEqual(
+      "SELECT IFNULL(IF(`foo_blah` = 123,`aa`,123),`blah`) AS `blah` "
+    );
+    expect(Q.deserialize(fn.serialize()).toSQL(flavor)).toEqual(
+      fn.toSQL(flavor)
+    );
+  });
+  it("datediff", () => {
+    expect(Fn.dateDiff("day", "a", "b").toSQL(flavor)).toEqual(
+      "DATEDIFF(`a`,`b`)"
+    );
+    expect(Fn.dateDiff("month", "a", "b").toSQL(flavor)).toEqual(
+      "TIMESTAMPDIFF(MONTH, `a`, `b`)"
+    );
+    expect(Fn.dateDiff("year", "a", "b").toSQL(flavor)).toEqual(
+      "(YEAR(`a`) - YEAR(`b`))"
     );
   });
 });

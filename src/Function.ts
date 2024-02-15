@@ -60,21 +60,17 @@ export const Function = {
   ) => {
     if (interval === "month") {
       return Q.expr(
-        `TIMESTAMPDIFF(MONTH,${Expression.escapeExpressionValue(
+        `TIMESTAMPDIFF(MONTH, ${Expression.escapeExpressionValue(
           date1
         )}, ${Expression.escapeExpressionValue(date2)})`
       );
     } else if (interval === "day") {
-      return Q.expr(
-        `DATEDIFF(${Expression.escapeExpressionValue(
-          date1
-        )}, ${Expression.escapeExpressionValue(date2)})`
-      );
+      return new FunctionExpression("DATEDIFF", date1, date2);
     } else {
-      return Q.expr(
-        `YEAR(${Expression.escapeExpressionValue(
-          date1
-        )}) - YEAR(${Expression.escapeExpressionValue(date2)})`
+      return new OperationExpression(
+        "-",
+        Function.year(date1),
+        Function.year(date2)
       );
     }
   },
@@ -88,13 +84,7 @@ export const Function = {
     return Q.expr(`NULL`);
   },
   ifnull: (name: ExpressionValue, value: ExpressionValue) => {
-    return Q.expr(
-      `IFNULL(${Expression.escapeExpressionValue(name)},${
-        typeof value === "string"
-          ? value
-          : Expression.escapeExpressionValue(value)
-      })`
-    );
+    return new FunctionExpression("IFNULL", name, value);
   },
   concat: (...values: ExpressionValue[]) => {
     return new FunctionExpression("CONCAT", ...values);

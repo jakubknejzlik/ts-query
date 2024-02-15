@@ -11,7 +11,7 @@ export type ExpressionValue =
   | Condition;
 
 export class ExpressionBase implements ISerializable, ISequelizable {
-  static deserialize(value: ExpressionValue): ExpressionBase {
+  static deserialize(value: ExpressionValue, exact = false): ExpressionBase {
     const valueIsString = typeof value === "string";
     if (valueIsString && ValueExpression.isValueString(value)) {
       return ValueExpression.deserialize(value);
@@ -22,20 +22,24 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     if (valueIsString && OperationExpression.isValidString(value)) {
       return OperationExpression.deserialize(value);
     }
-    if (valueIsString || typeof value === "number") {
-      return new Expression(value);
-    }
-    if (value instanceof Condition) {
-      return Condition.deserialize(value);
-    }
     if (
       valueIsString ||
       (value instanceof Expression && typeof value.value === "string")
     ) {
-      const condition = Condition.deserialize(value.value || value);
+      const condition = Condition.deserialize(
+        value instanceof Expression ? value.value : value
+      );
       if (condition !== null) {
         return condition;
       }
+    }
+    if (valueIsString || typeof value === "number") {
+      const expr = new Expression(value);
+      expr.setExact(exact);
+      return expr;
+    }
+    if (value instanceof Condition) {
+      return Condition.deserialize(value);
     }
     return value;
   }
@@ -55,6 +59,10 @@ export class ExpressionBase implements ISerializable, ISequelizable {
 export class Expression<T = ExpressionValue> extends ExpressionBase {
   constructor(public value: T) {
     super();
+  }
+
+  setExact(exact: boolean): this {
+    return this;
   }
 
   toSQL(flavor: ISQLFlavor): string {
