@@ -1,0 +1,93 @@
+import { Meta } from "@storybook/addon-docs";
+import { QueryPreview } from "./QueryPreview";
+
+<Meta title="3. Functions" />
+
+# Function Builder
+
+The Function Builder is a comprehensive utility designed to construct various SQL functions, facilitating the manipulation and transformation of data within queries. It abstracts complex SQL function syntax, enabling developers to construct sophisticated queries more intuitively and maintainably.
+
+## Basic Usage
+
+The `Function` object is your starting point for creating SQL function expressions:
+
+<QueryPreview code={`Fn.sum('amount');`} />
+
+## Function Types
+
+### Arithmetic Functions
+
+Perform basic arithmetic operations like addition, subtraction, multiplication, and division:
+
+**Add**
+
+<QueryPreview code={`Fn.add('column1', 'column2');`} />
+
+**Subtract**
+
+<QueryPreview code={`Fn.subtract('column1', 'column2');`} />
+
+**Multiply**
+
+<QueryPreview code={`Fn.multiply('column1', 'column2');`} />
+
+**Divide**
+
+<QueryPreview code={`Fn.divide('column1', 'column2');`} />
+
+### Aggregate Functions
+
+Compute a single result from a set of input values:
+
+**Sum**
+
+<QueryPreview code={`Fn.sum('sales');`} />
+
+**Min**
+
+<QueryPreview code={`Fn.min('price');`} />
+**Max**
+
+<QueryPreview code={`Fn.max('price');`} />
+
+**Avg**
+
+<QueryPreview code={`Fn.avg('score');`} />
+
+### Date Functions
+
+Manipulate and format date values:
+
+**Year**
+
+<QueryPreview code={`Fn.year('created_at');`} />
+
+**Month**
+
+<QueryPreview code={`Fn.month('created_at');`} />
+
+**DateDiff**
+
+<QueryPreview code={`Fn.dateDiff('day', '2022-01-01', '2022-01-31');`} />
+
+### Conditional Functions
+
+Execute logic based on conditions:
+
+**IfNull**
+
+<QueryPreview code={`Fn.ifnull('column', 'default_value');`} />
+
+**If**
+
+<QueryPreview code={`Fn.if(Cond.equal('status', 'active'), 'Yes', 'No');`} />
+
+## Advanced Usage
+
+Combining functions to create complex expressions:
+
+<QueryPreview code={`Fn.sum(Fn.ifnull('revenue', 0));`} />
+
+## Conclusion
+
+The Function Builder greatly simplifies the construction of SQL functions, making your queries more readable and easier to maintain. It covers a wide range of functionalities, from simple arithmetic operations to complex conditional and aggregate expressions.

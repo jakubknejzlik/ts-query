@@ -7,15 +7,7 @@ const preview = {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
-    },
-    options: {
-      storySort: (a, b) => {
-        return (
-          a.id.localeCompare(b.id, undefined, { numeric: true }) +
-          (a.type === "docs" ? -10 : 0)
-        );
-      },
-    },
+
   },
 };
 
