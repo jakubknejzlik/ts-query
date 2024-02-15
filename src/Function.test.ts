@@ -50,6 +50,18 @@ describe("Expression", () => {
     ).toEqual(
       'SUM(IF(`tax_date` BETWEEN "2020-01-01" AND "2020-01-31",`amount`,0))'
     );
+
+    expect(
+      Fn.sum(
+        Fn.if(
+          Cond.between(`tax_date`, ["2020-01-01", "2020-01-31"]),
+          "price_last_year",
+          Fn.string(`0`)
+        )
+      ).toSQL(flavor)
+    ).toEqual(
+      'SUM(IF(`tax_date` BETWEEN "2020-01-01" AND "2020-01-31",`price_last_year`,"0"))'
+    );
   });
   it("should support serialization for functions", () => {
     const serialized =
@@ -70,5 +82,20 @@ describe("Expression", () => {
     // console.log("serialized test:", JSON.stringify(fn.serialize()));
 
     expect(fn2.toSQL(flavor)).toEqual(fn.toSQL(flavor));
+
+    const fn3 = Q.select().addField(
+      Fn.sum(
+        Fn.if(
+          Cond.between(`tax_date`, ["2020-01-01", "2020-01-31"]),
+          "price_last_year",
+          Fn.string(`0`)
+        )
+      ),
+      "blah"
+    );
+
+    expect(Q.deserialize(fn3.serialize()).toSQL(flavor)).toEqual(
+      fn3.toSQL(flavor)
+    );
   });
 });

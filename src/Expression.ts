@@ -12,20 +12,30 @@ export type ExpressionValue =
 
 export class ExpressionBase implements ISerializable, ISequelizable {
   static deserialize(value: ExpressionValue): ExpressionBase {
-    if (typeof value === "string" && ValueExpression.isValueString(value)) {
+    const valueIsString = typeof value === "string";
+    if (valueIsString && ValueExpression.isValueString(value)) {
       return ValueExpression.deserialize(value);
     }
-    if (typeof value === "string" && FunctionExpression.isValidString(value)) {
+    if (valueIsString && FunctionExpression.isValidString(value)) {
       return FunctionExpression.deserialize(value);
     }
-    if (typeof value === "string" && OperationExpression.isValidString(value)) {
+    if (valueIsString && OperationExpression.isValidString(value)) {
       return OperationExpression.deserialize(value);
     }
-    if (typeof value === "string" || typeof value === "number") {
+    if (valueIsString || typeof value === "number") {
       return new Expression(value);
     }
     if (value instanceof Condition) {
       return Condition.deserialize(value);
+    }
+    if (
+      valueIsString ||
+      (value instanceof Expression && typeof value.value === "string")
+    ) {
+      const condition = Condition.deserialize(value.value || value);
+      if (condition !== null) {
+        return condition;
+      }
     }
     return value;
   }

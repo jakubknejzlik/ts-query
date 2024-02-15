@@ -43,7 +43,14 @@ export class Condition implements ISequelizable, ISerializable {
         );
     }
   }
-  static deserialize(value: Condition): Condition {
+  static deserialize(value: Condition | string): Condition | null {
+    if (typeof value === "string") {
+      try {
+        return Condition.fromJSON(JSON.parse(value));
+      } catch {
+        return null;
+      }
+    }
     return value;
     // console.log("??", value);
     // if (typeof value === "string") {
