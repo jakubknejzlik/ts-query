@@ -59,6 +59,13 @@ describe("Condition Serialization and Deserialization", () => {
       condition.toSQL(flavor)
     );
   });
+  it("should serialize and deserialize between with expressions", () => {
+    const condition = Conditions.between("foo", ["abcd", Q.expr("now()")]);
+    const json = condition.toJSON();
+    expect(Condition.fromJSON(json).toSQL(flavor)).toEqual(
+      condition.toSQL(flavor)
+    );
+  });
 
   // IN
   it("should serialize and deserialize in condition", () => {
@@ -71,7 +78,7 @@ describe("Condition Serialization and Deserialization", () => {
   // AND
   it("should serialize and deserialize and condition", () => {
     const condition1 = Conditions.equal("foo", 123);
-    const condition2 = Conditions.greaterThan("bar", 50);
+    const condition2 = Conditions.greaterThan("bar", Q.expr("a"));
     const condition = Conditions.and([condition1, condition2]);
     const serialized = condition.toJSON();
     const deserialized = Condition.fromJSON(serialized);

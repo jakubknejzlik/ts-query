@@ -44,6 +44,9 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     return value;
   }
   static deserializeValue(value: ExpressionValue): ValueExpression {
+    if (value instanceof FunctionExpression) {
+      throw new Error("FunctionExpression cannot be used as a value");
+    }
     if (value instanceof ValueExpression) {
       return value;
     }
@@ -133,6 +136,9 @@ export class ValueExpression extends Expression {
     if (typeof value === "string" && value.startsWith("!!!")) {
       const res = new ValueExpression(JSON.parse(value.substring(3)));
       return res;
+    }
+    if (value instanceof Expression) {
+      return new ValueExpression(value.value);
     }
     return new ValueExpression(value);
   }
