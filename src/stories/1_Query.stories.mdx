@@ -341,7 +341,7 @@ Q.select()
 One of the key features of the Query Builder is its immutability. This ensures that once a query is constructed, it cannot be changed, preventing unintended side-effects:
 
 ```tsx
-Q.select().from("table").orderBy("bar", "DESC");
+const originalQuery = Q.select().from("table").orderBy("bar", "DESC");
 const newQuery = originalQuery.orderBy("foo");
 ```
 
