@@ -395,8 +395,8 @@ export const Conditions = {
   between: (key: ExpressionValue, values: [ExpressionValue, ExpressionValue]) =>
     new BetweenCondition(
       key,
-      ValueExpression.deserialize(values[0]),
-      ValueExpression.deserialize(values[1])
+      Expression.deserializeValue(values[0]),
+      Expression.deserializeValue(values[1])
     ),
   in: (key: string, values: ExpressionValue[]) => new InCondition(key, values),
   notIn: (key: ExpressionValue, values: ExpressionValue[]) =>

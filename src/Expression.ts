@@ -11,8 +11,11 @@ export type ExpressionValue =
   | Condition;
 
 export class ExpressionBase implements ISerializable, ISequelizable {
-  static deserialize(value: ExpressionValue, exact = false): ExpressionBase {
+  static deserialize(value: ExpressionValue): ExpressionBase {
     const valueIsString = typeof value === "string";
+    if (valueIsString && RawExpression.isValueString(value)) {
+      return RawExpression.deserialize(value);
+    }
     if (valueIsString && ValueExpression.isValueString(value)) {
       return ValueExpression.deserialize(value);
     }
@@ -21,6 +24,9 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     }
     if (valueIsString && OperationExpression.isValidString(value)) {
       return OperationExpression.deserialize(value);
+    }
+    if (value instanceof RawExpression) {
+      return value;
     }
     if (
       valueIsString ||
@@ -35,7 +41,6 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     }
     if (valueIsString || typeof value === "number") {
       const expr = new Expression(value);
-      expr.setExact(exact);
       return expr;
     }
     if (value instanceof Condition) {
@@ -50,7 +55,16 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     if (value instanceof ValueExpression) {
       return value;
     }
+    if (value instanceof RawExpression) {
+      return value;
+    }
+    if (typeof value === "string" && RawExpression.isValueString(value)) {
+      return RawExpression.deserialize(value);
+    }
     return ValueExpression.deserialize(value);
+  }
+  static deserializeRaw(value: ExpressionValue): RawExpression {
+    return RawExpression.deserialize(value);
   }
   toSQL(flavor: ISQLFlavor): string {
     throw new Error("Method not implemented.");
@@ -62,10 +76,6 @@ export class ExpressionBase implements ISerializable, ISequelizable {
 export class Expression<T = ExpressionValue> extends ExpressionBase {
   constructor(public value: T) {
     super();
-  }
-
-  setExact(exact: boolean): this {
-    return this;
   }
 
   toSQL(flavor: ISQLFlavor): string {
@@ -133,14 +143,38 @@ export class ValueExpression extends Expression {
     return `!!!` + JSON.stringify(this.value);
   }
   static deserialize(value: ExpressionValue): ValueExpression {
-    if (typeof value === "string" && value.startsWith("!!!")) {
+    const isStringValue = typeof value === "string";
+    if (isStringValue && ValueExpression.isValueString(value)) {
       const res = new ValueExpression(JSON.parse(value.substring(3)));
       return res;
     }
-    if (value instanceof Expression) {
-      return new ValueExpression(value.value);
-    }
+
     return new ValueExpression(value);
+  }
+}
+
+export class RawExpression extends Expression {
+  static isValueString(str: string): boolean {
+    return str.startsWith("!!") && str.endsWith("!!");
+  }
+  toSQL(flavor: ISQLFlavor): string {
+    return `${this.value}`;
+  }
+  serialize(): string {
+    return `!!` + JSON.stringify(this.value) + "!!";
+  }
+  static deserialize(value: ExpressionValue): ValueExpression {
+    if (
+      typeof value === "string" &&
+      value.startsWith("!!") &&
+      value.endsWith("!!")
+    ) {
+      const res = new RawExpression(
+        JSON.parse(value.substring(2, value.length - 2))
+      );
+      return res;
+    }
+    throw new Error(`Invalid raw expression: '${value}'`);
   }
 }
 

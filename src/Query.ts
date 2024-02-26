@@ -6,6 +6,7 @@ import {
   ExpressionBase,
   ExpressionRawValue,
   ExpressionValue,
+  RawExpression,
 } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
@@ -523,6 +524,7 @@ export const Query = {
     new CreateViewAsSelect(table, select, true),
   deserialize,
   flavors,
+  raw: (val: ExpressionValue) => new RawExpression(val),
   expr: (val: ExpressionValue) => ExpressionBase.deserialize(val),
   exprValue: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
   value: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
