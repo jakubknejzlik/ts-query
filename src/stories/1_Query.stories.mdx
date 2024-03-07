@@ -74,7 +74,7 @@ To perform a basic join (INNER JOIN by default):
 Q.select()
   .from('users')
   .join(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
@@ -91,7 +91,7 @@ You can specify the type of join you need:
 Q.select()
   .from('users')
   .innerJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
@@ -104,7 +104,7 @@ Q.select()
 Q.select()
   .from('users')
   .leftJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
@@ -117,7 +117,7 @@ Q.select()
 Q.select()
   .from('users')
   .rightJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
@@ -130,7 +130,7 @@ Q.select()
 Q.select()
   .from('users')
   .fullJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   );
 `}
@@ -157,11 +157,11 @@ You can chain multiple joins to combine more than two tables:
 Q.select()
   .from('users')
   .innerJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('users.id', 'o.user_id')
   )
   .leftJoin(
-    Query.table('products', 'p'),
+    Q.table('products', 'p'),
     Cond.columnEqual('o.product_id', 'p.id')
   );
 `}
@@ -176,7 +176,7 @@ When joining tables, especially with multiple joins, it's often useful to alias 
 Q.select()
   .from('users', 'u')
   .leftJoin(
-    Query.table('orders', 'o'),
+    Q.table('orders', 'o'),
     Cond.columnEqual('u.id', 'o.user_id')
   );
 `}
@@ -190,7 +190,7 @@ Join conditions can be more complex, involving logical operators like AND, OR:
   code={`
 Q.select()
 .from('users')
-.innerJoin(Query.table('orders', 'o'), Cond.and([
+.innerJoin(Q.table('orders', 'o'), Cond.and([
   Cond.columnEqual('users.id', 'o.user_id'),
   Cond.greaterThan('orders.amount', 100),
 ]));

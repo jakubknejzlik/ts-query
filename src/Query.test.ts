@@ -140,10 +140,7 @@ describe("Query builder SQL", () => {
     expect(
       Query.select()
         .from("table", "T1")
-        .join(
-          Query.table("otherTable", "T2"),
-          Cond.columnEqual("T1.foo", "T2.bar")
-        )
+        .join(Q.table("otherTable", "T2"), Cond.columnEqual("T1.foo", "T2.bar"))
         .toSQL(flavor)
     ).toEqual(
       "SELECT * FROM `table` AS `T1` INNER JOIN `otherTable` AS `T2` ON `T1`.`foo` = `T2`.`bar`"
@@ -154,7 +151,7 @@ describe("Query builder SQL", () => {
       Query.select()
         .from("table")
         .leftJoin(
-          Query.table("otherTable", "aliasOtherTable"),
+          Q.table("otherTable", "aliasOtherTable"),
           Cond.columnEqual("table.foo", "aliasOtherTable.bar")
         )
         .toSQL(flavor)
@@ -167,11 +164,11 @@ describe("Query builder SQL", () => {
       Query.select()
         .from("table")
         .join(
-          Query.table("otherTable", "T2"),
+          Q.table("otherTable", "T2"),
           Cond.columnEqual("table.foo", "otherTable.bar")
         )
         .leftJoin(
-          Query.table("anotherTable", "AAA"),
+          Q.table("anotherTable", "AAA"),
           Cond.columnEqual("table.foo", "anotherTable.bar")
         )
         .toSQL(flavor)
@@ -186,11 +183,11 @@ describe("Query builder SQL", () => {
       Query.select()
         .from(Query.select().from("table"))
         .join(
-          Query.table("otherTable", "T2"),
+          Q.table("otherTable", "T2"),
           Cond.columnEqual("table.foo", "otherTable.bar")
         )
         .leftJoin(
-          Query.table("anotherTable", "AAA"),
+          Q.table("anotherTable", "AAA"),
           Cond.columnEqual("table.foo", "anotherTable.bar")
         )
         .toSQL(flavor)
