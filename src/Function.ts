@@ -7,7 +7,6 @@ import {
   OperationExpression,
 } from "./Expression";
 import { Q } from "./Query";
-import { MySQLFlavor } from "./flavors/mysql";
 
 const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
 

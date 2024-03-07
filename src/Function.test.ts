@@ -139,4 +139,10 @@ describe("Expression", () => {
       "(YEAR(`a`) - YEAR(`b`))"
     );
   });
+
+  it("complex functions", () => {
+    expect(Fn.if(Cond.lessThan("a", 30), "a", "b").toSQL(flavor)).toEqual(
+      "IF(`a` < 30,`a`,`b`)"
+    );
+  });
 });
