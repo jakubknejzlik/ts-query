@@ -19,6 +19,9 @@ const ifFn = (
 };
 
 export const Function = {
+  count: (column: ExpressionValue) => {
+    return new FunctionExpression("COUNT", column);
+  },
   add: (...columns: ExpressionValue[]) => {
     return new OperationExpression("+", ...columns);
   },

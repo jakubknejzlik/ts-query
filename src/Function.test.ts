@@ -6,6 +6,8 @@ const flavor = Q.flavors.mysql;
 
 describe("Expression", () => {
   it("should produce valid SQL", () => {
+    expect(Fn.count("*").toSQL(flavor)).toEqual("COUNT(*)");
+    expect(Fn.count("foo").toSQL(flavor)).toEqual("COUNT(`foo`)");
     expect(Fn.sum("foo").toSQL(flavor)).toEqual("SUM(`foo`)");
     expect(Fn.max("foo").toSQL(flavor)).toEqual("MAX(`foo`)");
     expect(Fn.add("foo", "blah").toSQL(flavor)).toEqual("(`foo` + `blah`)");
