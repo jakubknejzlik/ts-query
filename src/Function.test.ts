@@ -29,6 +29,9 @@ describe("Expression", () => {
         flavor
       )
     ).toEqual('(YEAR("2024-01-01") - YEAR("2025-01-01"))');
+    expect(Fn.substring("year", 1, 10).toSQL(flavor)).toEqual(
+      "SUBSTRING(`year`,1,10)"
+    );
   });
   it("should support value composition", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(

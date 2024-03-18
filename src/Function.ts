@@ -79,6 +79,18 @@ export const Function = {
   formatDate: (date: Dayjs) => {
     return Q.expr(`'${formatDayjs(date)}'`);
   },
+  substring: (
+    string: string,
+    start: ExpressionValue,
+    length: ExpressionValue
+  ) => {
+    return new FunctionExpression(
+      "SUBSTRING",
+      string,
+      Q.value(start),
+      Q.value(length)
+    );
+  },
   string: (value: string) => {
     return Q.expr(Expression.escapeString(`${value}`));
   },
