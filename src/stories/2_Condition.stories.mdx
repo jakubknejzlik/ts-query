@@ -178,6 +178,16 @@ Cond.notLike('foo', 'He_lo wor%');
 `}
 />
 
+## Conditions with functions
+
+To check if a column's value does not match a pattern:
+
+<QueryPreview
+  code={`
+Cond.notLike(Fn.sum('foo'), 'He_lo wor%');
+`}
+/>
+
 ## Conclusion
 
 The Condition Builder offers a powerful and flexible way to construct SQL conditions in a readable manner. By abstracting the raw SQL syntax, it helps in reducing errors and improving maintainability.
