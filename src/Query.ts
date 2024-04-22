@@ -414,8 +414,11 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     sql += flavor.escapeLimitAndOffset(this._limit, this._offset);
 
     this._unionQueries.forEach((unionQuery) => {
-      sql =
-        `(` + sql + `) ${unionQuery.type} (${unionQuery.query.toSQL(flavor)})`;
+      sql = flavor.escapeUnion(
+        unionQuery.type,
+        sql,
+        unionQuery.query.toSQL(flavor)
+      );
     });
     return sql;
   }

@@ -1,6 +1,6 @@
-import { MySQLFlavor } from "./mysql";
+import { DefaultFlavor } from "./default";
 
-export class AWSTimestreamFlavor extends MySQLFlavor {
+export class AWSTimestreamFlavor extends DefaultFlavor {
   protected columnQuotes = `"`;
   protected stringQuotes = `'`;
   escapeLimitAndOffset(limit?: number, offset?: number): string {
