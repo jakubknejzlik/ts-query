@@ -3,6 +3,7 @@ export { CreateViewAsSelect } from "./CreateViewAsSelect";
 export { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 
 export { AWSTimestreamFlavor } from "./flavors/aws-timestream";
+export { DefaultFlavor } from "./flavors/default";
 export { MySQLFlavor } from "./flavors/mysql";
 
 export { Cond, Condition, type ConditionValue } from "./Condition";
