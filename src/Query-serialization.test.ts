@@ -7,7 +7,7 @@ describe("Query builder JSON Serialization/Deserialization", () => {
     const originalQuery = Q.select()
       .from("table")
       .where(Conditions.equal("foo", 123));
-    const jsonStr = JSON.stringify(originalQuery.toJSON());
+    const jsonStr = originalQuery.serialize();
     const deserializedQuery = Q.deserialize(jsonStr);
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });

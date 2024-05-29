@@ -81,7 +81,7 @@ export const escapeTable = (table: TableSource, flavor: ISQLFlavor): string => {
 
 export class QueryBase implements ISequelizable, IMetadata {
   protected _tables: Table[] = [];
-  protected _joins: Join[] = [];
+  protected _joins?: Join[] = [];
 
   public getOperationType(): MetadataOperationType {
     return MetadataOperationType.SELECT;
@@ -389,7 +389,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   toSQL(flavor: ISQLFlavor = flavors.mysql): string {
     let sql = super.toSQL(flavor);
 
-    if (this._joins.length > 0) {
+    if (this._joins?.length > 0) {
       sql += ` ${this._joins.map((j) => j.toSQL(flavor)).join(" ")}`;
     }
     if (this._where.length > 0) {
@@ -433,24 +433,45 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
       tables: this._tables.map((table) =>
         typeof table === "string" ? table : table.toJSON()
       ),
-      unionQueries: this._unionQueries.map((u) => ({
-        type: u.type,
-        query: u.query.toJSON(),
-      })),
-      joins: this._joins.map((join) => join.toJSON()),
-      fields: this._fields.map((f) => ({
-        name: Expression.deserialize(f.name).serialize(),
-        alias: f.alias,
-      })),
-      where: this._where.map((condition) => condition.toJSON()),
-      having: this._having.map((condition) => condition.toJSON()),
+      unionQueries:
+        this._unionQueries.length > 0
+          ? this._unionQueries.map((u) => ({
+              type: u.type,
+              query: u.query.toJSON(),
+            }))
+          : undefined,
+      joins:
+        this._joins.length > 0
+          ? this._joins.map((join) => join.toJSON())
+          : undefined,
+      fields:
+        this._fields.length > 0
+          ? this._fields.map((f) => ({
+              name: Expression.deserialize(f.name).serialize(),
+              alias: f.alias,
+            }))
+          : undefined,
+      where:
+        this._where.length > 0
+          ? this._where.map((condition) => condition.toJSON())
+          : undefined,
+      having:
+        this._having.length > 0
+          ? this._having.map((condition) => condition.toJSON())
+          : undefined,
+      orderBy:
+        this._orderBy.length > 0
+          ? this._orderBy.map((o) => ({
+              field: o.field.serialize(),
+              direction: o.direction,
+            }))
+          : undefined,
+      groupBy:
+        this._groupBy.length > 0
+          ? this._groupBy.map((c) => c.serialize())
+          : undefined,
       limit: this._limit,
       offset: this._offset,
-      orderBy: this._orderBy.map((o) => ({
-        field: o.field.serialize(),
-        direction: o.direction,
-      })),
-      groupBy: this._groupBy.map((c) => c.serialize()),
     };
   }
   static fromJSON(json: any): SelectQuery {
@@ -465,7 +486,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     query._joins = (json.joins || []).map((joinJson: any) =>
       Join.fromJSON(joinJson)
     );
-    query._fields = json.fields.map((field: any) => ({
+    query._fields = (json.fields ?? []).map((field: any) => ({
       name: Expression.deserialize(field.name),
       alias: field.alias,
     }));
