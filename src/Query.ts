@@ -306,9 +306,19 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     clone._where.push(condition);
     return clone;
   }
+  removeWhere(): this {
+    const clone = this.clone();
+    clone._where = [];
+    return clone;
+  }
   having(condition: Condition): this {
     const clone = this.clone();
     clone._having.push(condition);
+    return clone;
+  }
+  removeHaving(): this {
+    const clone = this.clone();
+    clone._having = [];
     return clone;
   }
 
