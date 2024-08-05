@@ -5,6 +5,7 @@ export { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 export { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 export { DefaultFlavor } from "./flavors/default";
 export { MySQLFlavor } from "./flavors/mysql";
+export { SQLiteFlavor } from "./flavors/sqlite";
 
 export { Cond, Condition, type ConditionValue } from "./Condition";
 export { Fn, Function } from "./Function";
