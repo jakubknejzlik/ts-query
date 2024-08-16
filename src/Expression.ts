@@ -2,7 +2,7 @@ import { Condition, ConditionValue } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import { ISequelizable, ISerializable } from "./interfaces";
 
-export type ExpressionRawValue = string | number;
+export type ExpressionRawValue = string | number | bigint | boolean;
 export type ExpressionValue =
   | ExpressionBase
   | ExpressionRawValue
@@ -39,7 +39,12 @@ export class ExpressionBase implements ISerializable, ISequelizable {
         return condition;
       }
     }
-    if (valueIsString || typeof value === "number") {
+    if (
+      valueIsString ||
+      typeof value === "number" ||
+      typeof value === "bigint" ||
+      typeof value === "boolean"
+    ) {
       const expr = new Expression(value);
       return expr;
     }
@@ -134,7 +139,12 @@ export class ValueExpression extends Expression {
     return str.startsWith("!!!");
   }
   toSQL(flavor: ISQLFlavor): string {
-    if (typeof this.value === "number" || typeof this.value === "string") {
+    if (
+      typeof this.value === "number" ||
+      typeof this.value === "string" ||
+      typeof this.value === "bigint" ||
+      typeof this.value === "boolean"
+    ) {
       return flavor.escapeValue(this.value);
     }
     return this.value.toSQL(flavor);

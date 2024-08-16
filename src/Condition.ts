@@ -1,10 +1,5 @@
 import { Dayjs } from "dayjs";
-import {
-  Expression,
-  ExpressionBase,
-  ExpressionValue,
-  ValueExpression,
-} from "./Expression";
+import { Expression, ExpressionBase, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q } from "./Query";
 import { ISequelizable, ISerializable } from "./interfaces";
@@ -60,7 +55,7 @@ export class Condition implements ISequelizable, ISerializable {
   }
 }
 
-export type ConditionValue = string | number | boolean | null | Dayjs;
+export type ConditionValue = string | number | bigint | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
 class BinaryCondition extends Condition {
