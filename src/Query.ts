@@ -11,6 +11,7 @@ import {
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
+import { SQLiteFlavor } from "./flavors/sqlite";
 import { Fn } from "./Function";
 import {
   IMetadata,
@@ -24,6 +25,7 @@ import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 const flavors = {
   mysql: new MySQLFlavor(),
   awsTimestream: new AWSTimestreamFlavor(),
+  sqlite: new SQLiteFlavor(),
 };
 
 type TableSource = string | SelectQuery;

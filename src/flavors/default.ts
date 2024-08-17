@@ -50,7 +50,10 @@ export class DefaultFlavor implements ISQLFlavor {
       }`;
     }
     if (typeof value === "string") {
-      return `${this.stringQuotes}${value}${this.stringQuotes}`;
+      return `${this.stringQuotes}${value.replace(
+        new RegExp(`${this.stringQuotes}`, "g"),
+        `${this.stringQuotes}${this.stringQuotes}`
+      )}${this.stringQuotes}`;
     }
     return `${value}`;
   }
