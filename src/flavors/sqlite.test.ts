@@ -26,4 +26,14 @@ describe("SQLite Flavor flavor", () => {
       "UPDATE `table` SET `foo` = '''aa''xx\"'"
     );
   });
+  it("should render correct functions", () => {
+    const query = Q.select()
+      .addField(Fn.month("date"), "month")
+      .addField(Fn.year("date"), "year")
+      .addField(Fn.if(Cond.lessThan("foo", 5), "foo", "blah"), "blah")
+      .from("table");
+    expect(query.toSQL(flavor)).toEqual(
+      "SELECT strftime('%m', `date`, 'localtime') AS `month`, strftime('%Y', `date`, 'localtime') AS `year`, IIF(`foo` < 5, `foo`, `blah`) AS `blah` FROM `table`"
+    );
+  });
 });

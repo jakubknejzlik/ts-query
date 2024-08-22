@@ -14,6 +14,9 @@ export class SQLiteFlavor extends MySQLFlavor {
     if (fn.name === "YEAR") {
       return `strftime('%Y', ${args}, 'localtime')`;
     }
+    if (fn.name === "IF") {
+      return `IIF(${args})`;
+    }
     return super.escapeFunction(fn);
   }
   escapeTable(table: string): string {
