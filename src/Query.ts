@@ -560,6 +560,7 @@ export const Query = {
     new CreateViewAsSelect(table, select, true),
   deserialize,
   flavors,
+  null: () => new RawExpression("NULL"),
   raw: (val: ExpressionValue) => new RawExpression(val),
   expr: (val: ExpressionValue) => ExpressionBase.deserialize(val),
   exprValue: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),

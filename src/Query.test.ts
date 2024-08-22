@@ -16,9 +16,10 @@ describe("Query builder SQL", () => {
         .addField("foo")
         .addField(Fn.max("foo"), "fooMax")
         .addField("MAX(foo)", "fooMax2")
+        .addField(Q.null(), "nullValue")
         .toSQL(flavor)
     ).toEqual(
-      "SELECT `foo`, MAX(`foo`) AS `fooMax`, MAX(foo) AS `fooMax2` FROM `table`"
+      "SELECT `foo`, MAX(`foo`) AS `fooMax`, MAX(foo) AS `fooMax2`, NULL AS `nullValue` FROM `table`"
     );
     expect(
       Query.select().from("table").addField("foo", "blah").toSQL(flavor)
