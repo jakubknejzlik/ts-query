@@ -3,6 +3,7 @@ import { themes } from "prism-react-renderer";
 import React, { useState } from "react";
 import { LiveEditor, LiveError, LivePreview, LiveProvider } from "react-live";
 import * as components from "../index";
+import dayjs from "dayjs";
 
 interface QueryPreviewProps {
   code: string;
@@ -17,6 +18,7 @@ export const QueryPreview = ({ code }: QueryPreviewProps) => {
         code={`const query = ${state.code};\nrender(<>{query.toSQL(Q.flavors.mysql)}</>)`}
         scope={{
           ...components,
+          dayjs,
         }}
         noInline={true}
       >

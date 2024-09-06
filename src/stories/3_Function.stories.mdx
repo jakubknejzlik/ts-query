@@ -95,6 +95,14 @@ Execute logic based on conditions:
 
 <QueryPreview code={`Fn.if(Cond.equal('status', 'active'), 'Yes', 'No');`} />
 
+### Advanced functions
+
+**DateRange sum field**
+
+<QueryPreview
+  code={`Fn.dateRangeSumField({dateColumn:"date",valueColumn:"amount",dateFrom:dayjs().startOf('year'),dateTo:dayjs().endOf('month')})`}
+/>
+
 ## Advanced Usage
 
 Combining functions to create complex expressions:
