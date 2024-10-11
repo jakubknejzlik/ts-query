@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { Cond } from "./Condition";
 import { Q } from "./Query";
 
@@ -58,6 +59,16 @@ describe("Condition", () => {
     expect(Cond.between("foo", ["1", 2]).toSQL(flavor)).toEqual(
       '`foo` BETWEEN "1" AND 2'
     );
+  });
+  it("should format between", () => {
+    expect(Cond.between("foo", [1, 2]).toSQL(flavor)).toEqual(
+      "`foo` BETWEEN 1 AND 2"
+    );
+    expect(
+      Cond.between("foo", [dayjs("2024-01-01").startOf("year"), 2]).toSQL(
+        flavor
+      )
+    ).toEqual('`foo` BETWEEN "2024-01-01 00:00:00" AND 2');
   });
 
   // IN

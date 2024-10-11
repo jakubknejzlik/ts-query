@@ -1,3 +1,4 @@
+import dayjs, { Dayjs } from "dayjs";
 import { Condition, Conditions } from "./Condition";
 import { Q } from "./Query";
 
@@ -61,6 +62,16 @@ describe("Condition Serialization and Deserialization", () => {
   });
   it("should serialize and deserialize between with expressions", () => {
     const condition = Conditions.between("foo", ["abcd", Q.raw("now()")]);
+    const json = condition.toJSON();
+    expect(Condition.fromJSON(json).toSQL(flavor)).toEqual(
+      condition.toSQL(flavor)
+    );
+  });
+  it("should serialize and deserialize between with date", () => {
+    const condition = Conditions.between("foo", [
+      dayjs().startOf("day"),
+      dayjs().endOf("day").toDate(),
+    ]);
     const json = condition.toJSON();
     expect(Condition.fromJSON(json).toSQL(flavor)).toEqual(
       condition.toSQL(flavor)

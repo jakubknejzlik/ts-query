@@ -1,3 +1,4 @@
+import { Dayjs, isDayjs } from "dayjs";
 import { Condition } from "./Condition";
 import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { CreateViewAsSelect } from "./CreateViewAsSelect";
@@ -21,6 +22,8 @@ import {
   OperationType,
 } from "./interfaces";
 import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
+
+export type InputValue = ExpressionValue | Dayjs;
 
 const flavors = {
   mysql: new MySQLFlavor(),
@@ -543,6 +546,11 @@ const deserialize = (json: string) => {
   }
 };
 
+const inputValueToExpressionValue = (val: InputValue): ExpressionValue => {
+  if (isDayjs(val)) return val.toDate();
+  return val;
+};
+
 export const Query = {
   table: (name: string, alias?: string) => new Table(name, alias),
   select: () => {
@@ -561,12 +569,18 @@ export const Query = {
   deserialize,
   flavors,
   null: () => new RawExpression("NULL"),
-  raw: (val: ExpressionValue) => new RawExpression(val),
-  expr: (val: ExpressionValue) => ExpressionBase.deserialize(val),
-  exprValue: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
-  value: (val: ExpressionValue) => ExpressionBase.deserializeValue(val),
+  raw: (val: ExpressionRawValue) => new RawExpression(val),
+  expr: (val: InputValue) =>
+    ExpressionBase.deserialize(inputValueToExpressionValue(val)),
+  exprValue: (val: InputValue) =>
+    ExpressionBase.deserializeValue(inputValueToExpressionValue(val)),
+  value: (val: InputValue) =>
+    ExpressionBase.deserializeValue(inputValueToExpressionValue(val)),
   column: (col: ExpressionRawValue) => Expression.escapeColumn(col),
   S: (literals: string | readonly string[]) => {
+    return Fn.string(`${literals}`);
+  },
+  string: (literals: string | readonly string[]) => {
     return Fn.string(`${literals}`);
   },
 };

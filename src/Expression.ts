@@ -1,4 +1,4 @@
-import { Condition, ConditionValue } from "./Condition";
+import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import { ISequelizable, ISerializable } from "./interfaces";
 
@@ -8,10 +8,14 @@ export type ExpressionValue =
   | ExpressionRawValue
   | FunctionExpression
   | OperationExpression
-  | Condition;
+  | Condition
+  | Date;
 
 export class ExpressionBase implements ISerializable, ISequelizable {
   static deserialize(value: ExpressionValue): ExpressionBase {
+    if (value instanceof Date) {
+      return ValueExpression.deserialize(value);
+    }
     const valueIsString = typeof value === "string";
     if (valueIsString && RawExpression.isValueString(value)) {
       return RawExpression.deserialize(value);
@@ -68,7 +72,7 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     }
     return ValueExpression.deserialize(value);
   }
-  static deserializeRaw(value: ExpressionValue): RawExpression {
+  static deserializeRaw(value: ExpressionRawValue): RawExpression {
     return RawExpression.deserialize(value);
   }
   toSQL(flavor: ISQLFlavor): string {
@@ -134,27 +138,39 @@ export class Expression<T = ExpressionValue> extends ExpressionBase {
   }
 }
 
-export class ValueExpression extends Expression {
+export class ValueExpression extends Expression<ExpressionValue> {
   static isValueString(str: string): boolean {
-    return str.startsWith("!!!");
+    return str.startsWith("!!!") || this.isValueDateString(str);
+  }
+  static isValueDateString(str: string): boolean {
+    return str.startsWith("!D!");
   }
   toSQL(flavor: ISQLFlavor): string {
     if (
       typeof this.value === "number" ||
       typeof this.value === "string" ||
       typeof this.value === "bigint" ||
-      typeof this.value === "boolean"
+      typeof this.value === "boolean" ||
+      this.value instanceof Date
     ) {
       return flavor.escapeValue(this.value);
     }
     return this.value.toSQL(flavor);
   }
   serialize(): string {
+    if (this.value instanceof Date) {
+      return `!D!` + this.value.valueOf() + "!!";
+    }
     return `!!!` + JSON.stringify(this.value);
   }
   static deserialize(value: ExpressionValue): ValueExpression {
     const isStringValue = typeof value === "string";
     if (isStringValue && ValueExpression.isValueString(value)) {
+      if (ValueExpression.isValueDateString(value)) {
+        return new ValueExpression(
+          new Date(parseInt(value.substring(3, value.length - 2), 10))
+        );
+      }
       const res = new ValueExpression(JSON.parse(value.substring(3)));
       return res;
     }
@@ -163,17 +179,17 @@ export class ValueExpression extends Expression {
   }
 }
 
-export class RawExpression extends Expression {
+export class RawExpression extends Expression<ExpressionRawValue> {
   static isValueString(str: string): boolean {
     return str.startsWith("!!") && str.endsWith("!!");
   }
   toSQL(flavor: ISQLFlavor): string {
-    return `${this.value}`;
+    return flavor.escapeRawValue(this.value);
   }
   serialize(): string {
     return `!!` + JSON.stringify(this.value) + "!!";
   }
-  static deserialize(value: ExpressionValue): ValueExpression {
+  static deserialize(value: ExpressionRawValue): RawExpression {
     if (
       typeof value === "string" &&
       value.startsWith("!!") &&

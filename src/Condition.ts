@@ -4,6 +4,8 @@ import { ISQLFlavor } from "./Flavor";
 import { Q } from "./Query";
 import { ISequelizable, ISerializable } from "./interfaces";
 
+type ConditionValue = ExpressionValue | Dayjs;
+
 export class Condition implements ISequelizable, ISerializable {
   toSQL(flavor: ISQLFlavor): string {
     throw new Error("Method not implemented.");
@@ -47,15 +49,9 @@ export class Condition implements ISequelizable, ISerializable {
       }
     }
     return value;
-    // console.log("??", value);
-    // if (typeof value === "string") {
-    //   return this.fromJSON(JSON.parse(value));
-    // }
-    // return this.fromJSON(value);
   }
 }
 
-export type ConditionValue = string | number | bigint | boolean | null | Dayjs;
 type Operator = "=" | "!=" | ">" | "<" | ">=" | "<=";
 
 class BinaryCondition extends Condition {
@@ -63,11 +59,7 @@ class BinaryCondition extends Condition {
   value: ExpressionBase;
   operator: Operator;
 
-  constructor(
-    key: ExpressionValue,
-    value: ExpressionValue,
-    operator: Operator
-  ) {
+  constructor(key: ConditionValue, value: ConditionValue, operator: Operator) {
     super();
     this.key = Q.expr(key);
     this.value = Q.value(value);
@@ -135,11 +127,7 @@ class BetweenCondition extends Condition {
   from: ExpressionBase;
   to: ExpressionBase;
 
-  constructor(
-    key: ExpressionValue,
-    from: ExpressionValue,
-    to: ExpressionValue
-  ) {
+  constructor(key: ConditionValue, from: ConditionValue, to: ConditionValue) {
     super();
     this.key = Q.expr(key);
     this.from = Q.expr(from);
@@ -175,7 +163,7 @@ class InCondition extends Condition {
   key: ExpressionBase;
   values: ExpressionBase[];
 
-  constructor(key: ExpressionValue, values: ExpressionValue[]) {
+  constructor(key: ConditionValue, values: ConditionValue[]) {
     super();
     this.key = Q.expr(key);
     this.values = values.map((v) => Q.exprValue(v));
@@ -208,7 +196,7 @@ class NotInCondition extends Condition {
   key: ExpressionBase;
   values: ExpressionBase[];
 
-  constructor(key: ExpressionValue, values: ExpressionValue[]) {
+  constructor(key: ConditionValue, values: ConditionValue[]) {
     super();
     this.key = Q.expr(key);
     this.values = values.map((v) => Q.expr(v));
@@ -241,7 +229,7 @@ class NullCondition extends Condition {
   key: ExpressionBase;
   isNull: boolean;
 
-  constructor(key: ExpressionValue, isNull: boolean) {
+  constructor(key: ConditionValue, isNull: boolean) {
     super();
     this.key = Q.expr(key);
     this.isNull = isNull;
@@ -270,7 +258,7 @@ class LikeCondition extends Condition {
   pattern: string;
   isLike: boolean;
 
-  constructor(key: ExpressionValue, pattern: string, isLike: boolean) {
+  constructor(key: ConditionValue, pattern: string, isLike: boolean) {
     super();
     this.key = Q.expr(key);
     this.pattern = pattern;
@@ -308,8 +296,8 @@ class ColumnComparisonCondition extends Condition {
   operator: Operator;
 
   constructor(
-    leftKey: ExpressionValue,
-    rightKey: ExpressionValue,
+    leftKey: ConditionValue,
+    rightKey: ConditionValue,
     operator: Operator
   ) {
     super();
@@ -375,26 +363,22 @@ export const Conditions = {
     }
     return Conditions.equal(column, str);
   },
-  equal: (key: ExpressionValue, value: ExpressionValue) =>
+  equal: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, "="),
-  notEqual: (key: ExpressionValue, value: ExpressionValue) =>
+  notEqual: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, "!="),
-  greaterThan: (key: ExpressionValue, value: ExpressionValue) =>
+  greaterThan: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, ">"),
-  lessThan: (key: ExpressionValue, value: ExpressionValue) =>
+  lessThan: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, "<"),
-  greaterThanOrEqual: (key: ExpressionValue, value: ExpressionValue) =>
+  greaterThanOrEqual: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, ">="),
-  lessThanOrEqual: (key: ExpressionValue, value: ExpressionValue) =>
+  lessThanOrEqual: (key: ConditionValue, value: ConditionValue) =>
     new BinaryCondition(key, value, "<="),
-  between: (key: ExpressionValue, values: [ExpressionValue, ExpressionValue]) =>
-    new BetweenCondition(
-      key,
-      Expression.deserializeValue(values[0]),
-      Expression.deserializeValue(values[1])
-    ),
-  in: (key: string, values: ExpressionValue[]) => new InCondition(key, values),
-  notIn: (key: ExpressionValue, values: ExpressionValue[]) =>
+  between: (key: ConditionValue, values: [ConditionValue, ConditionValue]) =>
+    new BetweenCondition(key, Q.exprValue(values[0]), Q.exprValue(values[1])),
+  in: (key: string, values: ConditionValue[]) => new InCondition(key, values),
+  notIn: (key: ConditionValue, values: ConditionValue[]) =>
     new NotInCondition(key, values),
   and: (conditions: Condition[]) => new LogicalCondition(conditions, "AND"),
   or: (conditions: Condition[]) => new LogicalCondition(conditions, "OR"),

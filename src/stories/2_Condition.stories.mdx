@@ -89,6 +89,16 @@ Cond.between('foo', [1, 2]);
 `}
 />
 
+You can also use dates:
+
+<QueryPreview
+  code={`
+Cond.between('foo', [dayjs().startOf('year'), dayjs().endOf('day')]);
+`}
+/>
+
+Note: outputing SQL depends on [timezone of flavor](/docs/4-dates-and-timezones--docs).
+
 ### IN
 
 To check if a column's value is within a set of values:

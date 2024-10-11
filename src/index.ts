@@ -7,7 +7,7 @@ export { DefaultFlavor } from "./flavors/default";
 export { MySQLFlavor } from "./flavors/mysql";
 export { SQLiteFlavor } from "./flavors/sqlite";
 
-export { Cond, Condition, type ConditionValue } from "./Condition";
+export { Cond, Condition } from "./Condition";
 export { Fn, Function } from "./Function";
 export { Q, Query, SelectQuery } from "./Query";
 export {
@@ -18,3 +18,5 @@ export {
 } from "./interfaces";
 
 export { type ISQLFlavor } from "./Flavor";
+
+export type { ExpressionRawValue, ExpressionValue } from "./Expression";

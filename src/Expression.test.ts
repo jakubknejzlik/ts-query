@@ -1,5 +1,18 @@
-import { Expression, ExpressionBase } from "./Expression";
+import dayjs from "dayjs";
+import {
+  Expression,
+  ExpressionBase,
+  RawExpression,
+  ValueExpression,
+} from "./Expression";
 import { Q } from "./Query";
+import { MySQLFlavor } from "./flavors/mysql";
+
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const flavor = Q.flavors.mysql;
 
@@ -61,5 +74,57 @@ describe("Expression serialization", () => {
         ).serialize()
       ).toSQL(flavor)
     ).toEqual(expr2.toSQL(flavor));
+  });
+
+  it("DateExpression serialization", () => {
+    const expr = new ValueExpression(new Date());
+    expect(
+      ExpressionBase.deserialize(
+        ExpressionBase.deserialize(expr.serialize()).serialize()
+      ).toSQL(flavor)
+    ).toEqual(expr.toSQL(flavor));
+    expect(expr.toSQL(flavor)).toEqual(
+      `"` + dayjs(expr.value as Date).format("YYYY-MM-DD HH:mm:ss") + `"`
+    );
+  });
+
+  it("Date value expression serialization", () => {
+    const date = new Date();
+    const expr = Q.expr(date);
+    const expr2 = Q.exprValue(date);
+    const expr3 = new ValueExpression(date);
+    expect(expr.toSQL(flavor)).toEqual(
+      `"` + dayjs(date).format("YYYY-MM-DD HH:mm:ss") + `"`
+    );
+    expect(
+      ExpressionBase.deserialize(
+        ExpressionBase.deserialize(expr.serialize()).serialize()
+      ).toSQL(flavor)
+    ).toEqual(expr.toSQL(flavor));
+    expect(expr2.toSQL(flavor)).toEqual(expr.toSQL(flavor));
+    expect(expr3.toSQL(flavor)).toEqual(expr.toSQL(flavor));
+  });
+
+  it("Date value expression serialization with timezones", () => {
+    const timezone = "Europe/Prague";
+    const flavorWithTimezone = new MySQLFlavor({ timezone });
+    const date = new Date();
+    const expr = Q.expr(date);
+    const expr2 = Q.exprValue(date);
+    const expr3 = new ValueExpression(date);
+    expect(expr.toSQL(flavorWithTimezone)).toEqual(
+      `"` + dayjs(date).tz(timezone).format("YYYY-MM-DD HH:mm:ss") + `"`
+    );
+    expect(
+      ExpressionBase.deserialize(
+        ExpressionBase.deserialize(expr.serialize()).serialize()
+      ).toSQL(flavorWithTimezone)
+    ).toEqual(expr.toSQL(flavorWithTimezone));
+    expect(expr2.toSQL(flavorWithTimezone)).toEqual(
+      expr.toSQL(flavorWithTimezone)
+    );
+    expect(expr3.toSQL(flavorWithTimezone)).toEqual(
+      expr.toSQL(flavorWithTimezone)
+    );
   });
 });

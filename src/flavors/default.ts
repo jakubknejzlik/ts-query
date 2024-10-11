@@ -1,16 +1,31 @@
-import { isDayjs } from "dayjs";
-import { ConditionValue } from "../Condition";
+import dayjs from "dayjs";
 import {
   Expression,
+  ExpressionRawValue,
+  ExpressionValue,
   FunctionExpression,
   OperationExpression,
 } from "../Expression";
 import { ISQLFlavor } from "../Flavor";
 import { UnionType } from "../Query";
 
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+type FlavorOptions = {
+  timezone?: string;
+};
+
 export class DefaultFlavor implements ISQLFlavor {
   protected columnQuotes = "`";
   protected stringQuotes = `"`;
+
+  constructor(public options?: FlavorOptions) {
+    this.options = options;
+  }
 
   escapeColumn(name: string, legacyParsing?: boolean): string {
     if (name === "NULL") {
@@ -43,11 +58,15 @@ export class DefaultFlavor implements ISQLFlavor {
     return this.escapeColumn(table);
   }
 
-  escapeValue(value: ConditionValue): string {
-    if (isDayjs(value)) {
-      return `${this.stringQuotes}${value.format("YYYY-MM-DD HH:mm:ss")}${
-        this.stringQuotes
-      }`;
+  escapeRawValue(value: ExpressionRawValue): string {
+    return `${value}`;
+  }
+
+  escapeValue(value: ExpressionValue): string {
+    if (value instanceof Date) {
+      return this.escapeValue(
+        dayjs(value).tz(this.options?.timezone).format("YYYY-MM-DD HH:mm:ss")
+      );
     }
     if (typeof value === "string") {
       return `${this.stringQuotes}${value.replace(

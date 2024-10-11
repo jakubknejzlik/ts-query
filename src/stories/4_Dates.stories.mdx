@@ -1,0 +1,20 @@
+import { Meta } from "@storybook/addon-docs";
+import { CodePreview } from "./CodePreview";
+
+<Meta title="4. Dates and Timezones" />
+
+# Dates and Timezones
+
+When working with dates, it's important to consider the timezone of the client compared to that of the database server. This library allows you to handle dates using `Date` or `dayjs` on the client side, serialize them, and send them to the backend, where you can choose the appropriate timezone for formatting.
+
+Here's an example of using different timezones with MySQL:
+
+<CodePreview
+  code={`const us = new MySQLFlavor({timezone:'America/Chicago'});\nconst eu = new MySQLFlavor({timezone:'Europe/Prague'});\nconst c = Cond.between('date',[dayjs().startOf('month'),dayjs().endOf('day')]);\nreturn { us: c.toSQL(us), eu: c.toSQL(eu) };`}
+/>
+
+Dates are serialized as Unix timestamps in milliseconds. Here’s how to serialize date ranges:
+
+<CodePreview
+  code={`const c = Cond.between('date',[dayjs().startOf('month'),dayjs().endOf('day')]);\nreturn c.serialize();`}
+/>
