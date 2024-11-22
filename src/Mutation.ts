@@ -1,6 +1,7 @@
 import { Condition } from "./Condition";
+import { Expression, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
-import { Table } from "./Query";
+import { Q, Table } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
@@ -10,7 +11,8 @@ import {
   OperationType,
 } from "./interfaces";
 
-type RowRecord = Record<string, any>;
+type RowRecord = Record<string, Expression>;
+type RowRecordInput = Record<string, Expression | any>;
 
 export class MutationBase {
   protected _table: Table;
@@ -113,7 +115,7 @@ export class InsertMutation
     return clone;
   }
 
-  values(values: RowRecord[]): this {
+  values(values: RowRecordInput[]): this {
     const clone = this.clone();
     clone._values = [...clone._values, ...values];
     return clone;
@@ -173,9 +175,13 @@ export class UpdateMutation
     return clone;
   }
 
-  set(values: RowRecord): this {
+  set(values: RowRecordInput): this {
     const clone = this.clone();
-    clone._values = { ...clone._values, ...values };
+    const _values = {};
+    for (const [key, value] of Object.entries(values)) {
+      _values[key] = value instanceof Expression ? value : Q.exprValue(value);
+    }
+    clone._values = { ...clone._values, ..._values };
     return clone;
   }
 
@@ -192,8 +198,7 @@ export class UpdateMutation
       this._values
     )
       .map(
-        ([key, value]) =>
-          `${flavor.escapeColumn(key)} = ${flavor.escapeValue(value)}`
+        ([key, value]) => `${flavor.escapeColumn(key)} = ${value.toSQL(flavor)}`
       )
       .join(", ")}`;
     if (this._where.length) {
@@ -209,17 +214,25 @@ export class UpdateMutation
   }
 
   toJSON() {
+    const _values = {};
+    for (const [key, value] of Object.entries(this._values)) {
+      _values[key] = value.serialize();
+    }
     return {
       type: OperationType.UPDATE,
       table: this._table.toJSON(),
-      values: this._values,
+      values: _values,
       where: this._where.map((condition) => condition.toJSON()),
     };
   }
 
   static fromJSON({ table, values, where }: any): UpdateMutation {
     const updateMutation = new UpdateMutation(table.source, table.alias);
-    updateMutation._values = values;
+    const _values = {};
+    for (const [key, value] of Object.entries(values)) {
+      _values[key] = Expression.deserialize(value as ExpressionValue);
+    }
+    updateMutation._values = _values;
     updateMutation._where = where.map((condition: any) =>
       Condition.fromJSON(condition)
     );

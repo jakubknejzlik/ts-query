@@ -1,4 +1,5 @@
 import { Cond } from "./Condition";
+import { Fn } from "./Function";
 import { Q } from "./Query";
 
 describe("Mutation builder SQL", () => {
@@ -21,10 +22,15 @@ describe("Mutation builder SQL", () => {
   it("should return SQL for update", () => {
     expect(
       Q.update("users")
-        .set({ name: "John Doe", age: 42, isActive: true })
+        .set({
+          name: "John Doe",
+          age: 42,
+          isActive: true,
+          total: Fn.multiply("amount", "price"),
+        })
         .toSQL()
     ).toEqual(
-      'UPDATE `users` SET `name` = "John Doe", `age` = 42, `isActive` = true'
+      'UPDATE `users` SET `name` = "John Doe", `age` = 42, `isActive` = true, `total` = (`amount` * `price`)'
     );
   });
 });

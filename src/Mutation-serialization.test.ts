@@ -1,4 +1,5 @@
 import { Conditions } from "./Condition";
+import { Fn } from "./Function";
 import { MutationBase } from "./Mutation";
 import { Q } from "./Query";
 
@@ -19,10 +20,17 @@ describe("Mutation serialization and deserialization", () => {
 
   it("should handle round-trip JSON serialization and deserialization for an update", () => {
     const originalQuery = Q.update("table")
-      .set({ foo: 123, bar: "baz" })
+      .set({
+        foo: 123,
+        bar: "baz",
+        total: Q.expr(Fn.multiply("amount", "price")),
+      })
       .where(Conditions.equal("foo", 123));
-    const jsonStr = JSON.stringify(originalQuery.toJSON());
-    const deserializedQuery = MutationBase.deserialize(jsonStr);
+    const ser = originalQuery.serialize();
+    const deserializedQuery = MutationBase.deserialize(ser);
+    expect(deserializedQuery.toSQL()).toEqual(
+      'UPDATE `table` SET `foo` = 123, `bar` = "baz", `total` = (`amount` * `price`) WHERE `foo` = 123'
+    );
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });
 });

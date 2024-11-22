@@ -279,6 +279,38 @@ Q.select().from(Q.select().from('table').where(Cond.equal('field', 'blah')),'sub
 `}
 />
 
+## Mutations
+
+You can also generate insert/update/delete statements
+
+### Insert
+
+<QueryPreview
+  code={`
+Q.insert('table').values([{foo:'blah'}]);
+`}
+/>
+
+### Update
+
+<QueryPreview
+  code={`
+Q.update('table')
+  .set({ 
+    foo: 'blah', 
+    total: Fn.divide(Fn.multiply('amount','price'),Q.raw(2)) 
+  }).where(Cond.equal('name','john'));
+`}
+/>
+
+### Delete
+
+<QueryPreview
+  code={`
+Q.delete('table').where(Cond.equal('id',123));
+`}
+/>
+
 ## Examples
 
 ### Basic Select Query
