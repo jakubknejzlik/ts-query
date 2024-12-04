@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { Cond } from "./Condition";
 import { Fn } from "./Function";
 import { Q } from "./Query";
@@ -53,11 +54,11 @@ describe("Expression", () => {
       Fn.dateRangeSumField({
         dateColumn: "tax_date",
         valueColumn: "amount",
-        start: "2020-01-01",
-        end: "2020-01-31",
+        start: dayjs("2020-01-01T00:00:00Z").startOf("day"),
+        end: dayjs("2020-01-31T15:00:00Z").endOf("day"),
       }).toSQL(flavor)
     ).toEqual(
-      'SUM(IF(`tax_date` BETWEEN "2020-01-01" AND "2020-01-31",`amount`,0))'
+      'SUM(IF(`tax_date` BETWEEN "2020-01-01 00:00:00" AND "2020-01-31 23:59:59",`amount`,0))'
     );
 
     expect(

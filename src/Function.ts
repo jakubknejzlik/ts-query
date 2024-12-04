@@ -8,7 +8,8 @@ import {
 } from "./Expression";
 import { Q } from "./Query";
 
-const formatDayjs = (dayjs: Dayjs) => dayjs.format("YYYY-MM-DD");
+const formatDayjs = (d: Dayjs | string) =>
+  dayjs(d).format("YYYY-MM-DD HH:mm:ss");
 
 const ifFn = (
   condition: Condition,
@@ -119,10 +120,7 @@ export const Function = {
       "SUM",
       new FunctionExpression(
         "IF",
-        Cond.between(dateColumn, [
-          formatDayjs(dayjs(start)),
-          formatDayjs(dayjs(end)),
-        ]),
+        Cond.between(dateColumn, [dayjs(start), dayjs(end)]),
         valueColumn,
         Q.value(0)
       )
