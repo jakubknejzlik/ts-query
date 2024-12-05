@@ -291,6 +291,22 @@ Q.insert('table').values([{foo:'blah'}]);
 `}
 />
 
+### Insert select
+
+<QueryPreview
+  code={`
+Q.insert('table').select(Q.select().from('table2'));
+`}
+/>
+
+You can also specify column names:
+
+<QueryPreview
+  code={`
+Q.insert('user_stats').select(Q.select().from('users').addField('region').addField(Fn.count('*')).groupBy('region'),['region','count']);
+`}
+/>
+
 ### Update
 
 <QueryPreview

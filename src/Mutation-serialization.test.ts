@@ -11,8 +11,18 @@ describe("Mutation serialization and deserialization", () => {
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });
 
-  it("should handle round-trip JSON serialization and deserialization for an insert", () => {
+  it("should handle round-trip JSON serialization and deserialization for an insert with values", () => {
     const originalQuery = Q.insert("table").values([{ foo: 123, bar: "baz" }]);
+    const jsonStr = JSON.stringify(originalQuery.toJSON());
+    const deserializedQuery = MutationBase.deserialize(jsonStr);
+    expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
+  });
+
+  it("should handle round-trip JSON serialization and deserialization for an insert with select", () => {
+    const originalQuery = Q.insert("users_backup").select(
+      Q.select().addField("id").addField("username").from("users"),
+      ["id", "username"]
+    );
     const jsonStr = JSON.stringify(originalQuery.toJSON());
     const deserializedQuery = MutationBase.deserialize(jsonStr);
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());

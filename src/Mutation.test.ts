@@ -9,13 +9,38 @@ describe("Mutation builder SQL", () => {
     );
   });
 
-  it("should return SQL for insert", () => {
+  it("should fail with empty insert", () => {
+    expect(() => console.log(Q.insert("users").toSQL())).toThrow(
+      new Error("values or select must be set for insert query")
+    );
+  });
+
+  it("should return SQL for insert values", () => {
     expect(
       Q.insert("users")
         .values([{ name: "John Doe", age: 42, isActive: true }])
         .toSQL()
     ).toEqual(
       'INSERT INTO `users` (`name`, `age`, `isActive`) VALUES ("John Doe", 42, true)'
+    );
+  });
+
+  it("should generate SQL for insert select", () => {
+    expect(
+      Q.insert("users_backup").select(Q.select().from("users")).toSQL()
+    ).toEqual("INSERT INTO `users_backup` SELECT * FROM `users`");
+  });
+
+  it("should generate SQL for insert select with columns", () => {
+    expect(
+      Q.insert("users_backup")
+        .select(Q.select().addField("id").addField("username").from("users"), [
+          "id",
+          "username",
+        ])
+        .toSQL()
+    ).toEqual(
+      "INSERT INTO `users_backup` (`id`, `username`) SELECT `id`, `username` FROM `users`"
     );
   });
 
