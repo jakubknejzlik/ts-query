@@ -207,6 +207,10 @@ export class UpdateMutation
     const clone = this.clone();
     const _values = {};
     for (const [key, value] of Object.entries(values)) {
+      if (value === null) {
+        _values[key] = Q.null();
+        continue;
+      }
       _values[key] = value instanceof Expression ? value : Q.exprValue(value);
     }
     clone._values = { ...clone._values, ..._values };

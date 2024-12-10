@@ -63,6 +63,9 @@ export class DefaultFlavor implements ISQLFlavor {
   }
 
   escapeValue(value: ExpressionValue): string {
+    if (value === null) {
+      return "NULL";
+    }
     if (value instanceof Date) {
       return this.escapeValue(
         dayjs(value).tz(this.options?.timezone).format("YYYY-MM-DD HH:mm:ss")

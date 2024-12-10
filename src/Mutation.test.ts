@@ -18,10 +18,10 @@ describe("Mutation builder SQL", () => {
   it("should return SQL for insert values", () => {
     expect(
       Q.insert("users")
-        .values([{ name: "John Doe", age: 42, isActive: true }])
+        .values([{ id: null, name: "John Doe", age: 42, isActive: true }])
         .toSQL()
     ).toEqual(
-      'INSERT INTO `users` (`name`, `age`, `isActive`) VALUES ("John Doe", 42, true)'
+      'INSERT INTO `users` (`id`, `name`, `age`, `isActive`) VALUES (NULL, "John Doe", 42, true)'
     );
   });
 
@@ -52,10 +52,11 @@ describe("Mutation builder SQL", () => {
           age: 42,
           isActive: true,
           total: Fn.multiply("amount", "price"),
+          null: null,
         })
         .toSQL()
     ).toEqual(
-      'UPDATE `users` SET `name` = "John Doe", `age` = 42, `isActive` = true, `total` = (`amount` * `price`)'
+      'UPDATE `users` SET `name` = "John Doe", `age` = 42, `isActive` = true, `total` = (`amount` * `price`), `null` = NULL'
     );
   });
 });
