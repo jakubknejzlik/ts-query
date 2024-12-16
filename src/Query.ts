@@ -120,11 +120,7 @@ export class QueryBase implements ISequelizable, IMetadata {
   /**
    * join function to join tables with all join types
    */
-  join(
-    table: Table,
-    condition?: Condition,
-    type: "INNER" | "LEFT" | "RIGHT" | "FULL" = "INNER"
-  ): this {
+  join(table: Table, condition?: Condition, type: JoinType = "INNER"): this {
     const clone = this.clone();
     clone._joins.push(new Join(table, condition, type));
     return clone;
@@ -141,6 +137,9 @@ export class QueryBase implements ISequelizable, IMetadata {
   fullJoin(table: Table, condition: Condition): this {
     return this.join(table, condition, "FULL");
   }
+  crossJoin(table: Table, condition: Condition): this {
+    return this.join(table, condition, "CROSS");
+  }
 
   public clone(): this {
     const clone = new (this.constructor as any)();
@@ -156,16 +155,14 @@ export class QueryBase implements ISequelizable, IMetadata {
   }
 }
 
+type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL" | "CROSS";
+
 class Join {
-  protected _type: "INNER" | "LEFT" | "RIGHT" | "FULL";
+  protected _type: JoinType;
   protected _table: Table;
   protected _condition?: Condition;
 
-  constructor(
-    table: Table,
-    condition?: Condition,
-    type: "INNER" | "LEFT" | "RIGHT" | "FULL" = "INNER"
-  ) {
+  constructor(table: Table, condition?: Condition, type: JoinType = "INNER") {
     this._table = table;
     this._condition = condition;
     this._type = type;

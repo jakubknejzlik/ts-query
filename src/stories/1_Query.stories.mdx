@@ -135,6 +135,17 @@ Q.select()
   );
 `}
 />
+### Cross Join
+
+A cross join returns the Cartesian product of the two tables, combining each row from the first table with every row from the second table:
+
+<QueryPreview
+  code={`
+Q.select()
+  .from('users')
+  .crossJoin(Q.table('orders', 'o'));
+`}
+/>
 
 ### Join Conditions
 

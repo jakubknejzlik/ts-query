@@ -160,6 +160,32 @@ describe("Query builder SQL", () => {
       "SELECT * FROM `table` LEFT JOIN `otherTable` AS `aliasOtherTable` ON `table`.`foo` = `aliasOtherTable`.`bar`"
     );
   });
+  it("should handle FULL JOIN", () => {
+    expect(
+      Query.select()
+        .from("table")
+        .fullJoin(
+          Q.table("otherTable", "aliasOtherTable"),
+          Cond.columnEqual("table.foo", "aliasOtherTable.bar")
+        )
+        .toSQL(flavor)
+    ).toEqual(
+      "SELECT * FROM `table` FULL JOIN `otherTable` AS `aliasOtherTable` ON `table`.`foo` = `aliasOtherTable`.`bar`"
+    );
+  });
+  it("should handle CROSS JOIN", () => {
+    expect(
+      Query.select()
+        .from("table")
+        .crossJoin(
+          Q.table("otherTable", "aliasOtherTable"),
+          Cond.columnEqual("table.foo", "aliasOtherTable.bar")
+        )
+        .toSQL(flavor)
+    ).toEqual(
+      "SELECT * FROM `table` CROSS JOIN `otherTable` AS `aliasOtherTable` ON `table`.`foo` = `aliasOtherTable`.`bar`"
+    );
+  });
   it("should handle multiple JOINS", () => {
     expect(
       Query.select()

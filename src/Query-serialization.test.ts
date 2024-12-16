@@ -58,6 +58,18 @@ describe("Query builder JSON Serialization/Deserialization", () => {
       .leftJoin(
         Q.table("anotherTable", "AAA"),
         Conditions.columnEqual("table.foo", "anotherTable.bar")
+      )
+      .rightJoin(
+        Q.table("anotherTable", "AAA"),
+        Conditions.columnEqual("table.foo", "anotherTable.bar")
+      )
+      .fullJoin(
+        Q.table("anotherTable", "AAA"),
+        Conditions.columnEqual("table.foo", "anotherTable.bar")
+      )
+      .crossJoin(
+        Q.table("anotherTable", "AAA"),
+        Conditions.columnEqual("table.foo", "anotherTable.bar")
       );
     const jsonStr = JSON.stringify(originalQuery.toJSON());
     const deserializedQuery = Q.deserialize(jsonStr);
