@@ -46,17 +46,21 @@ describe("Mutation builder SQL", () => {
 
   it("should return SQL for update", () => {
     expect(
-      Q.update("users")
+      Q.update("users", "u")
         .set({
           name: "John Doe",
           age: 42,
           isActive: true,
           total: Fn.multiply("amount", "price"),
           null: null,
+          ordersTotal: Q.select()
+            .addField(Fn.sum("price"))
+            .from("orders")
+            .where(Cond.columnEqual("user_id", "u.id")),
         })
         .toSQL()
     ).toEqual(
-      'UPDATE `users` SET `name` = "John Doe", `age` = 42, `isActive` = true, `total` = (`amount` * `price`), `null` = NULL'
+      'UPDATE `users` AS `u` SET `name` = "John Doe", `age` = 42, `isActive` = true, `total` = (`amount` * `price`), `null` = NULL, `ordersTotal` = (SELECT SUM(`price`) FROM `orders` WHERE `user_id` = `u`.`id`)'
     );
   });
 });

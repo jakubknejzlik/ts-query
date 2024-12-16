@@ -211,6 +211,10 @@ export class UpdateMutation
         _values[key] = Q.null();
         continue;
       }
+      if (value instanceof SelectQuery) {
+        _values[key] = value;
+        continue;
+      }
       _values[key] = value instanceof Expression ? value : Q.exprValue(value);
     }
     clone._values = { ...clone._values, ..._values };
@@ -229,9 +233,13 @@ export class UpdateMutation
     let sql = `UPDATE ${this._table.toSQL(flavor)} SET ${Object.entries(
       this._values
     )
-      .map(
-        ([key, value]) => `${flavor.escapeColumn(key)} = ${value.toSQL(flavor)}`
-      )
+      .map(([key, value]) => {
+        return `${flavor.escapeColumn(key)} = ${
+          value instanceof SelectQuery
+            ? `(${value.toSQL(flavor)})`
+            : value.toSQL(flavor)
+        }`;
+      })
       .join(", ")}`;
     if (this._where.length) {
       sql += ` WHERE ${this._where
@@ -262,7 +270,7 @@ export class UpdateMutation
     const updateMutation = new UpdateMutation(table.source, table.alias);
     const _values = {};
     for (const [key, value] of Object.entries(values)) {
-      _values[key] = Expression.deserialize(value as ExpressionValue);
+      _values[key] = Q.deserializeRaw(value as string);
     }
     updateMutation._values = _values;
     updateMutation._where = where.map((condition: any) =>

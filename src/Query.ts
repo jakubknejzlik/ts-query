@@ -543,6 +543,14 @@ const deserialize = (json: string) => {
   }
 };
 
+const deserializeRaw = (json: string) => {
+  try {
+    return deserialize(json);
+  } catch (e) {
+    return Expression.deserialize(json);
+  }
+};
+
 const inputValueToExpressionValue = (val: InputValue): ExpressionValue => {
   if (isDayjs(val)) return val.toDate();
   return val;
@@ -564,6 +572,7 @@ export const Query = {
   createOrReplaceViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select, true),
   deserialize,
+  deserializeRaw,
   flavors,
   null: () => new RawExpression("NULL"),
   raw: (val: ExpressionRawValue) => new RawExpression(val),

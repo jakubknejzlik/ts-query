@@ -1,4 +1,4 @@
-import { Conditions } from "./Condition";
+import { Cond, Conditions } from "./Condition";
 import { Fn } from "./Function";
 import { MutationBase } from "./Mutation";
 import { Q } from "./Query";
@@ -34,12 +34,16 @@ describe("Mutation serialization and deserialization", () => {
         foo: 123,
         bar: "baz",
         total: Q.expr(Fn.multiply("amount", "price")),
+        ordersTotal: Q.select()
+          .addField(Fn.sum("price"))
+          .from("orders")
+          .where(Cond.columnEqual("user_id", "u.id")),
       })
       .where(Conditions.equal("foo", 123));
     const ser = originalQuery.serialize();
     const deserializedQuery = MutationBase.deserialize(ser);
     expect(deserializedQuery.toSQL()).toEqual(
-      'UPDATE `table` SET `foo` = 123, `bar` = "baz", `total` = (`amount` * `price`) WHERE `foo` = 123'
+      'UPDATE `table` SET `foo` = 123, `bar` = "baz", `total` = (`amount` * `price`), `ordersTotal` = (SELECT SUM(`price`) FROM `orders` WHERE `user_id` = `u`.`id`) WHERE `foo` = 123'
     );
     expect(deserializedQuery.toSQL()).toEqual(originalQuery.toSQL());
   });
