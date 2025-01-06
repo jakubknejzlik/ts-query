@@ -377,16 +377,16 @@ export const Conditions = {
     new BinaryCondition(key, value, "<="),
   between: (key: ConditionValue, values: [ConditionValue, ConditionValue]) =>
     new BetweenCondition(key, Q.exprValue(values[0]), Q.exprValue(values[1])),
-  in: (key: string, values: ConditionValue[]) =>
-    values.length > 0 ? new InCondition(key, values) : null,
+  in: (key: string, values: ConditionValue[] | null) =>
+    values && values.length > 0 ? new InCondition(key, values) : null,
   notIn: (key: ConditionValue, values: ConditionValue[]) =>
     new NotInCondition(key, values),
-  and: (conditions: (Condition | null)[]) => {
-    const _c = conditions.filter((c) => c !== null);
+  and: (conditions: (Condition | null)[] | null) => {
+    const _c = (conditions || []).filter((c) => c !== null);
     return _c.length > 0 ? new LogicalCondition(_c, "AND") : null;
   },
-  or: (conditions: (Condition | null)[]) => {
-    const _c = conditions.filter((c) => c !== null);
+  or: (conditions: (Condition | null)[] | null) => {
+    const _c = (conditions || []).filter((c) => c !== null);
     return _c.length > 0 ? new LogicalCondition(_c, "OR") : null;
   },
   null: (key: string) => new NullCondition(key, true),

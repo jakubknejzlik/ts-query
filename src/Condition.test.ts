@@ -80,6 +80,7 @@ describe("Condition", () => {
       '`foo` IN ("1", "2", "3")'
     );
     expect(Cond.in("foo", [])).toBeNull();
+    expect(Cond.in("foo", null)).toBeNull();
   });
 
   // AND
@@ -90,6 +91,7 @@ describe("Condition", () => {
       "(`foo` = 123 AND `bar` > 50)"
     );
     expect(Cond.and([])).toBeNull();
+    expect(Cond.and(null)).toBeNull();
     expect(Cond.and([null])).toBeNull();
     expect(Cond.and([Cond.or([])])).toBeNull();
   });
@@ -102,6 +104,7 @@ describe("Condition", () => {
       "(`foo` = 123 OR `bar` < 50)"
     );
     expect(Cond.or([])).toBeNull();
+    expect(Cond.or(null)).toBeNull();
     expect(Cond.or([null])).toBeNull();
     expect(Cond.or([Cond.and([])])).toBeNull();
   });
