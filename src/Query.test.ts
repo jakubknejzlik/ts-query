@@ -57,6 +57,25 @@ describe("Query builder SQL", () => {
         .toSQL(flavor)
     ).toEqual('SELECT * FROM `table` WHERE `bar` < "abc"');
   });
+  // WHERE Conditions optional
+  it("should handle optional WHERE condition", () => {
+    expect(Query.select().from("table").where(null).toSQL(flavor)).toEqual(
+      "SELECT * FROM `table`"
+    );
+    expect(
+      Query.select()
+        .from("table")
+        .where(null)
+        .where(Cond.equal("foo", "blah"))
+        .toSQL(flavor)
+    ).toEqual('SELECT * FROM `table` WHERE `foo` = "blah"');
+    expect(
+      Query.select().from("table").where(Cond.and([])).toSQL(flavor)
+    ).toEqual("SELECT * FROM `table`");
+    expect(
+      Query.select().from("table").where(Cond.or([])).toSQL(flavor)
+    ).toEqual("SELECT * FROM `table`");
+  });
 
   // LIMIT and OFFSET
   it("should handle LIMIT and OFFSET", () => {

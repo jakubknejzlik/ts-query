@@ -303,7 +303,8 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     return clone;
   }
 
-  where(condition: Condition): this {
+  where(condition: Condition | null): this {
+    if (condition === null) return this;
     const clone = this.clone();
     clone._where.push(condition);
     return clone;

@@ -218,6 +218,35 @@ Q.select().from('table').where(Cond.equal('fieldName', 'foo')).where(Cond.lessTh
 `}
 />
 
+### Optional WHERE Conditions
+
+You can also add where conditions optionaly by providing empty values. For example all of these conditions are not applied
+
+<QueryPreview
+  code={`
+Q.select()
+  .from('table')
+  .where(Cond.and([]))
+  .where(Cond.or([]))
+  .where(Cond.in('foo', 1>2 ? ['abc'] : []));
+`}
+/>
+
+Also nested conditions are filtered
+
+<QueryPreview
+  code={`
+Q.select()
+  .from('table')
+  .where(Cond.and([
+    Cond.equal('foo','blah'), 
+    Cond.or([
+      Cond.in('foo',[])
+    ])
+  ]));
+`}
+/>
+
 ### LIMIT and OFFSET
 
 In scenarios where you don't want to retrieve all rows, you can limit the result set:

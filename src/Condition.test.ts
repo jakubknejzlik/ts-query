@@ -73,30 +73,37 @@ describe("Condition", () => {
 
   // IN
   it("should format in", () => {
-    expect(Cond.in("foo", [1, 2, 3]).toSQL(flavor)).toEqual(
+    expect(Cond.in("foo", [1, 2, 3])?.toSQL(flavor)).toEqual(
       "`foo` IN (1, 2, 3)"
     );
-    expect(Cond.in("foo", ["1", "2", "3"]).toSQL(flavor)).toEqual(
+    expect(Cond.in("foo", ["1", "2", "3"])?.toSQL(flavor)).toEqual(
       '`foo` IN ("1", "2", "3")'
     );
+    expect(Cond.in("foo", [])).toBeNull();
   });
 
   // AND
   it("should format and", () => {
     const condition1 = Cond.equal("foo", 123);
     const condition2 = Cond.greaterThan("bar", 50);
-    expect(Cond.and([condition1, condition2]).toSQL(flavor)).toEqual(
+    expect(Cond.and([condition1, condition2])?.toSQL(flavor)).toEqual(
       "(`foo` = 123 AND `bar` > 50)"
     );
+    expect(Cond.and([])).toBeNull();
+    expect(Cond.and([null])).toBeNull();
+    expect(Cond.and([Cond.or([])])).toBeNull();
   });
 
   // OR
   it("should format or", () => {
     const condition1 = Cond.equal("foo", 123);
     const condition2 = Cond.lessThan("bar", 50);
-    expect(Cond.or([condition1, condition2]).toSQL(flavor)).toEqual(
+    expect(Cond.or([condition1, condition2])?.toSQL(flavor)).toEqual(
       "(`foo` = 123 OR `bar` < 50)"
     );
+    expect(Cond.or([])).toBeNull();
+    expect(Cond.or([null])).toBeNull();
+    expect(Cond.or([Cond.and([])])).toBeNull();
   });
 
   // NULL
