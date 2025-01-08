@@ -146,6 +146,12 @@ describe("Expression", () => {
     );
   });
 
+  it("dateadd", () => {
+    expect(Fn.dateAdd("date", 12, "year").toSQL(flavor)).toEqual(
+      "DATE_ADD(`date`, INTERVAL 12 YEAR)"
+    );
+  });
+
   it("complex functions", () => {
     expect(Fn.if(Cond.lessThan("a", 30), "a", "b").toSQL(flavor)).toEqual(
       "IF(`a` < 30,`a`,`b`)"

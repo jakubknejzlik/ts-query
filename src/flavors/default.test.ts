@@ -26,4 +26,13 @@ describe("Default Flavor flavor", () => {
       'UPDATE `table` SET `foo` = "\'aa\'xx"""'
     );
   });
+
+  it("dateadd", () => {
+    expect(Fn.dateAdd("date", 12, "year").toSQL(flavor)).toEqual(
+      "DATE_ADD(`date`, INTERVAL 12 YEAR)"
+    );
+    expect(Fn.dateAdd("date", -12, "day").toSQL(flavor)).toEqual(
+      "DATE_ADD(`date`, INTERVAL -12 DAY)"
+    );
+  });
 });

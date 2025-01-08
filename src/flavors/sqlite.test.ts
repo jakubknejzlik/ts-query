@@ -36,4 +36,13 @@ describe("SQLite Flavor flavor", () => {
       "SELECT strftime('%m', `date`, 'localtime') AS `month`, strftime('%Y', `date`, 'localtime') AS `year`, IIF(`foo` < 5, `foo`, `blah`) AS `blah` FROM `table`"
     );
   });
+
+  it("dateadd", () => {
+    expect(Fn.dateAdd("date", 12, "year").toSQL(flavor)).toEqual(
+      "DateTime(`date`, '+12 year')"
+    );
+    expect(Fn.dateAdd("date", -12, "day").toSQL(flavor)).toEqual(
+      "DateTime(`date`, '-12 day')"
+    );
+  });
 });

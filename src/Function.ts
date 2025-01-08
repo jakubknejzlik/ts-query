@@ -19,6 +19,14 @@ const ifFn = (
   return new FunctionExpression("IF", condition, trueValue, falseValue);
 };
 
+const dateAddFn = (
+  date: ExpressionValue,
+  value: ExpressionValue,
+  interval: "year" | "month" | "day"
+) => {
+  return new FunctionExpression("DATEADD", date, value, interval);
+};
+
 export const Function = {
   count: (column: ExpressionValue) => {
     return new FunctionExpression("COUNT", column);
@@ -57,7 +65,7 @@ export const Function = {
     return new FunctionExpression("ABS", column);
   },
   dateDiff: (
-    interval: "year" | "month" | "day",
+    interval: "year" | "month" | "day" | "hour" | "minute" | "second",
     date1: ExpressionValue,
     date2: ExpressionValue
   ) => {
@@ -105,6 +113,7 @@ export const Function = {
     return new FunctionExpression("CONCAT", ...values);
   },
   if: ifFn,
+  dateAdd: dateAddFn,
   dateRangeSumField: ({
     dateColumn,
     valueColumn,

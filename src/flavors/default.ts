@@ -91,10 +91,15 @@ export class DefaultFlavor implements ISQLFlavor {
     return str;
   }
   escapeFunction(fn: FunctionExpression): string {
-    const args = fn.value
-      .map((x) => Expression.deserialize(x).toSQL(this))
-      .join(",");
-    return `${fn.name}(${args})`;
+    const args = fn.value.map((x) => Expression.deserialize(x).toSQL(this));
+    if (fn.name === "DATEADD") {
+      return `DATE_ADD(${
+        args[0]
+      }, INTERVAL ${fn.value[1].toString()} ${fn.value[2]
+        .toString()
+        .toUpperCase()})`;
+    }
+    return `${fn.name}(${args.join(",")})`;
   }
   escapeOperation(fn: OperationExpression): string {
     return (
