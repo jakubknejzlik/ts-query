@@ -1,4 +1,5 @@
 import { Conditions } from "./Condition";
+import { Fn } from "./Function";
 import { Q } from "./Query";
 
 describe("Query builder JSON Serialization/Deserialization", () => {
@@ -29,6 +30,7 @@ describe("Query builder JSON Serialization/Deserialization", () => {
       .from("table")
       .addField("foo")
       .addField("bar", "aliasBar")
+      .addField(Fn.dateAdd("date", 12, "year"), "nextYearDate")
       .where(Conditions.equal("foo", 123))
       .orderBy("bar", "DESC")
       .limit(10)

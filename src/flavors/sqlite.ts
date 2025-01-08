@@ -18,11 +18,14 @@ export class SQLiteFlavor extends MySQLFlavor {
       return `IIF(${args.join(", ")})`;
     }
     if (fn.name === "DATEADD") {
+      const argsValues = fn.value.map((x) =>
+        ExpressionBase.deserializeValue(x)
+      );
       return `DateTime(${args[0]}, '${
-        parseInt(fn.value[1].toString(), 10) >= 0
-          ? "+" + fn.value[1].toString()
-          : fn.value[1].toString()
-      } ${fn.value[2].toString()}')`;
+        parseInt(argsValues[1].value.toString(), 10) >= 0
+          ? "+" + argsValues[1].value.toString()
+          : argsValues[1].value.toString()
+      } ${argsValues[2].value.toString()}')`;
     }
     return super.escapeFunction(fn);
   }

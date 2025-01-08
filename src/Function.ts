@@ -24,7 +24,12 @@ const dateAddFn = (
   value: ExpressionValue,
   interval: "year" | "month" | "day"
 ) => {
-  return new FunctionExpression("DATEADD", date, value, interval);
+  return new FunctionExpression(
+    "DATEADD",
+    date,
+    Q.value(value),
+    Q.value(interval)
+  );
 };
 
 export const Function = {

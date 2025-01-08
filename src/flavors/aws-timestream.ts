@@ -18,9 +18,13 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
     const args = fn.value.map((arg) =>
       ExpressionBase.deserialize(arg).toSQL(this)
     );
+
     if (fn.name === "DATEADD") {
-      const interval = fn.value[1].toString();
-      const intervalType = fn.value[2].toString();
+      const argsValues = fn.value.map((x) =>
+        ExpressionBase.deserializeValue(x)
+      );
+      const interval = argsValues[1].value.toString();
+      const intervalType = argsValues[2].value.toString();
       return `date_add('${intervalType}', ${interval}, ${args[0]})`;
     }
     return super.escapeFunction(fn);

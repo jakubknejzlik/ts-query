@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import {
   Expression,
+  ExpressionBase,
   ExpressionRawValue,
   ExpressionValue,
   FunctionExpression,
@@ -91,13 +92,16 @@ export class DefaultFlavor implements ISQLFlavor {
     return str;
   }
   escapeFunction(fn: FunctionExpression): string {
-    const args = fn.value.map((x) => Expression.deserialize(x).toSQL(this));
+    const args = fn.value
+      .map((x) => Expression.deserialize(x))
+      .map((x) => x.toSQL(this));
     if (fn.name === "DATEADD") {
-      return `DATE_ADD(${
-        args[0]
-      }, INTERVAL ${fn.value[1].toString()} ${fn.value[2]
-        .toString()
-        .toUpperCase()})`;
+      const argsValues = fn.value.map((x) =>
+        ExpressionBase.deserializeValue(x)
+      );
+      return `DATE_ADD(${args[0]}, INTERVAL ${
+        argsValues[1].value
+      } ${argsValues[2].value.toString().toUpperCase()})`;
     }
     return `${fn.name}(${args.join(",")})`;
   }
