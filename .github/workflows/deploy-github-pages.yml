@@ -27,6 +27,6 @@ jobs:
           node-version: "16.x"
 
       #👇 Add Storybook build and deploy to GitHub Pages as a step in the workflow
-      - uses: bitovi/github-actions-storybook-to-github-pages@v1.0.2
+      - uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
         with:
           path: storybook-static # default: dist/storybook
