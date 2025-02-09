@@ -1,0 +1,40 @@
+import { Meta } from "@storybook/addon-docs";
+import { CodePreview } from "./CodePreview";
+
+<Meta title="5. Serialization & SQL" />
+
+# SQL Conversion
+
+Easily convert queries to SQL using different flavors. Each flavor formats the SQL specifically for a given database engine, ensuring compatibility and optimal performance.
+
+For example, a query using the `month` function can be converted to SQL suitable for MySQL, SQLite, or Amazon Timestream:
+
+<CodePreview
+  code={`const q = Q.select().addField(Fn.month('dateColumn')).from('table');
+return {
+  mysql: q.toSQL(Q.flavors.mysql),
+  sqlite: q.toSQL(Q.flavors.sqlite),
+  awsTimestream: q.toSQL(Q.flavors.awsTimestream)
+};`}
+/>
+
+# Serialization & Deserialization
+
+Serialization allows queries to be transferred securely between the client and server, enabling them to be reconstructed on the backend and executed against a database. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
+
+### Serializing on the Client
+
+Convert a query into a serialized format before sending it to the server. This ensures that the query structure remains intact and can be safely transmitted over HTTP or other communication protocols.
+
+<CodePreview code={`return Q.select().from('table').serialize();`} />
+
+### Deserializing on the Server
+
+Reconstruct the serialized query on the backend and convert it into SQL for execution. This allows for dynamic query generation and execution while maintaining security and consistency.
+
+<CodePreview
+  code={`const serialized = Q.select().from('table').serialize();
+return Q.deserialize(serialized).toSQL(Q.flavors.mysql);`}
+/>
+
+Using serialization and deserialization, developers can build efficient client-server architectures where complex queries are created on the frontend and executed on the backend without direct SQL exposure, reducing potential SQL injection risks.
