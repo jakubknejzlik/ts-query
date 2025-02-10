@@ -1,0 +1,111 @@
+import { Meta } from "@storybook/addon-docs";
+import { CodePreview } from "./CodePreview";
+
+<Meta title="6. Transformations" />
+
+# 6. Transformations
+
+Transformations let you intercept and modify query structures at SQL generation time. This is useful for enforcing ACL rules, dynamic table routing, default filters, or modifying mutations without altering each query manually.
+
+## Usage
+
+When calling `toSQL`, provide transformation functions:
+- `transformTable`: Alters table references.
+- `transformSelectQuery`: Modifies `SELECT` queries.
+- `transformInsertMutation`: Adjusts `INSERT` statements.
+- `transformUpdateMutation`: Modifies `UPDATE` operations.
+- `transformDeleteMutation`: Restricts `DELETE` queries.
+
+## Transforming Table References
+
+This example replaces a table reference with a subquery:
+
+<CodePreview
+  code={`const baseQuery = Q.select().from("foo", "f1");
+const joinQuery = baseQuery.leftJoin(Q.table("foo2", "f2"), Cond.columnEqual("f1.id", "f2.id"));
+
+return joinQuery.toSQL(Q.flavors.mysql, {
+  transformTable: (table) => {
+    if (table === "foo") {
+      return Q.select()
+        .from(table, "f")
+        .join(Q.table("bar", "b"), Cond.columnEqual("f.id", "b.id"));
+    }
+    return table;
+  },
+});
+`}/>
+
+## Modifying `SELECT` Queries
+
+You can modify fields in `SELECT` queries dynamically:
+
+<CodePreview
+  code={`const baseQuery = Q.select().from("foo");
+const unionQuery = baseQuery.union(Q.select().from("blah"));
+
+return unionQuery.toSQL(Q.flavors.mysql, {
+  transformSelectQuery: (select) => {
+    return select.addField("f1.name", "f1name");
+  },
+});
+`}/>
+
+## Altering `INSERT` Statements
+
+Automatically add fields like `createdAt`:
+
+<CodePreview
+  code={`const insertQuery = Q.insert("foo").values([{ id: 1, name: "foo" }]);
+
+return insertQuery.toSQL(Q.flavors.mysql, {
+  transformInsertMutation: (q) => {
+    const values = q.allValues().map((v) => ({ ...v, createdAt: "YYYY-MM-DD" }));
+    return q.removeAllValues().values(values);
+  },
+});
+`}/>
+
+## Modifying `UPDATE` Operations
+
+Ensure updates meet specific conditions:
+
+<CodePreview
+  code={`const updateQuery = Q.update("foo").set({ firstName: "john" });
+
+return updateQuery.toSQL(Q.flavors.mysql, {
+  transformUpdateMutation: (q) => {
+    return q.set({ firstName: "jane" }).where(Cond.equal("lastName", "doe"));
+  },
+});
+`}/>
+
+## Restricting `DELETE` Queries
+
+Add automatic conditions to `DELETE` queries:
+
+<CodePreview
+  code={`const deleteQuery = Q.delete("foo");
+
+return deleteQuery.toSQL(Q.flavors.mysql, {
+  transformDeleteMutation: (q) => {
+    return q.where(Cond.equal("owner", "12345"));
+  },
+});
+`}/>
+
+## Common Use Cases
+
+1. **ACL Enforcement**  
+   Automatically append conditions for access control.
+
+2. **Sharding**  
+   Dynamically redirect queries to the appropriate database partition.
+
+3. **Data Auditing**  
+   Add fields like `createdAt` to `INSERT` statements automatically.
+
+4. **Soft Deletes**  
+   Transform `DELETE` into an `UPDATE` setting a `deletedAt` timestamp.
+
+By applying these transformations, query logic remains centralized and adaptable without needing individual query modifications.

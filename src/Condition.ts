@@ -1,5 +1,5 @@
 import { Dayjs } from "dayjs";
-import { Expression, ExpressionBase, ExpressionValue } from "./Expression";
+import { ExpressionBase, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q } from "./Query";
 import { ISequelizable, ISerializable } from "./interfaces";

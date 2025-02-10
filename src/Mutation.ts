@@ -1,11 +1,12 @@
 import { Condition } from "./Condition";
-import { Expression, ExpressionValue } from "./Expression";
+import { Expression } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q, SelectQuery, Table } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
+  ISequelizableOptions,
   ISerializable,
   MetadataOperationType,
   OperationType,
@@ -68,7 +69,14 @@ export class DeleteMutation
     return clone;
   }
 
-  toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
+  toSQL(
+    flavor: ISQLFlavor = new MySQLFlavor(),
+    options?: ISequelizableOptions,
+    transformed = false
+  ): string {
+    if (options?.transformDeleteMutation && !transformed) {
+      return options.transformDeleteMutation(this).toSQL(flavor, options, true);
+    }
     let sql = `DELETE FROM ${this._table.toSQL(flavor)}`;
     if (this._where.length) {
       sql += ` WHERE ${this._where
@@ -116,6 +124,16 @@ export class InsertMutation
     return clone;
   }
 
+  removeAllValues(): this {
+    const clone = this.clone();
+    clone._values = undefined;
+    return clone;
+  }
+
+  allValues(): RowRecord[] {
+    return this._values;
+  }
+
   values(values: RowRecordInput[]): this {
     const clone = this.clone();
     if (clone._selectWithColumns) throw new Error("select already set");
@@ -130,7 +148,14 @@ export class InsertMutation
     return clone;
   }
 
-  toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
+  toSQL(
+    flavor: ISQLFlavor = new MySQLFlavor(),
+    options?: ISequelizableOptions,
+    transformed = false
+  ): string {
+    if (options?.transformInsertMutation && !transformed) {
+      return options.transformInsertMutation(this).toSQL(flavor, options, true);
+    }
     if (this._values) {
       return `INSERT INTO ${this._table.toSQL(flavor)} (${Object.keys(
         this._values[0]
@@ -227,7 +252,14 @@ export class UpdateMutation
     return clone;
   }
 
-  toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
+  toSQL(
+    flavor: ISQLFlavor = new MySQLFlavor(),
+    options?: ISequelizableOptions,
+    transformed = false
+  ): string {
+    if (options?.transformUpdateMutation && !transformed) {
+      return options.transformUpdateMutation(this).toSQL(flavor, options, true);
+    }
     if (!this._values) throw new Error("No values to update");
 
     let sql = `UPDATE ${this._table.toSQL(flavor)} SET ${Object.entries(

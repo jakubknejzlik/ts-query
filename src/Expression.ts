@@ -1,6 +1,10 @@
 import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
-import { ISequelizable, ISerializable } from "./interfaces";
+import {
+  ISequelizable,
+  ISequelizableOptions,
+  ISerializable,
+} from "./interfaces";
 
 export type ExpressionRawValue = string | number | bigint | boolean;
 export type ExpressionValue =
@@ -75,7 +79,7 @@ export class ExpressionBase implements ISerializable, ISequelizable {
   static deserializeRaw(value: ExpressionRawValue): RawExpression {
     return RawExpression.deserialize(value);
   }
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(_: ISQLFlavor, __?: ISequelizableOptions): string {
     throw new Error("Method not implemented.");
   }
   serialize(): string {
@@ -87,9 +91,9 @@ export class Expression<T = ExpressionValue> extends ExpressionBase {
     super();
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     if (this.value instanceof Expression) {
-      return this.value.toSQL(flavor);
+      return this.value.toSQL(flavor, options);
     }
     let value = `${this.value}`;
     const stringMatches = value.match(/&([^#]+)&/g);
@@ -145,7 +149,7 @@ export class ValueExpression extends Expression<ExpressionValue> {
   static isValueDateString(str: string): boolean {
     return str.startsWith("!D!");
   }
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     if (
       typeof this.value === "number" ||
       typeof this.value === "string" ||
@@ -155,7 +159,7 @@ export class ValueExpression extends Expression<ExpressionValue> {
     ) {
       return flavor.escapeValue(this.value);
     }
-    return this.value.toSQL(flavor);
+    return this.value.toSQL(flavor, options);
   }
   serialize(): string {
     if (this.value instanceof Date) {
@@ -183,7 +187,7 @@ export class RawExpression extends Expression<ExpressionRawValue> {
   static isValueString(str: string): boolean {
     return str.startsWith("!!") && str.endsWith("!!");
   }
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, _?: ISequelizableOptions): string {
     return flavor.escapeRawValue(this.value);
   }
   serialize(): string {
@@ -208,7 +212,7 @@ export class FunctionExpression extends Expression<ExpressionValue[]> {
   constructor(public name: string, ...args: ExpressionValue[]) {
     super(args);
   }
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, _?: ISequelizableOptions): string {
     return flavor.escapeFunction(this);
   }
   static isValidString(str: string): boolean {
@@ -238,7 +242,7 @@ export class OperationExpression extends Expression<ExpressionValue[]> {
   constructor(public operation, ...args: ExpressionValue[]) {
     super(args);
   }
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, _?: ISequelizableOptions): string {
     return flavor.escapeOperation(this);
   }
   static isValidString(str: string): boolean {

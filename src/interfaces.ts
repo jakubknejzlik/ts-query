@@ -1,7 +1,22 @@
 import { ISQLFlavor } from "./Flavor";
+import {
+  DeleteMutation,
+  InsertMutation,
+  MutationBase,
+  UpdateMutation,
+} from "./Mutation";
+import { SelectQuery, TableSource } from "./Query";
+
+export interface ISequelizableOptions {
+  transformTable?: (table: string) => TableSource;
+  transformSelectQuery?: (table: SelectQuery) => SelectQuery;
+  transformInsertMutation?: (table: InsertMutation) => InsertMutation;
+  transformUpdateMutation?: (table: UpdateMutation) => UpdateMutation;
+  transformDeleteMutation?: (table: DeleteMutation) => DeleteMutation;
+}
 
 export interface ISequelizable {
-  toSQL(flavor: ISQLFlavor): string;
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string;
 }
 export interface ISerializable {
   serialize(): string;

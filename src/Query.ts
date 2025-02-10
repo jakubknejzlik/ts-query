@@ -17,6 +17,7 @@ import { Fn } from "./Function";
 import {
   IMetadata,
   ISequelizable,
+  ISequelizableOptions,
   ISerializable,
   MetadataOperationType,
   OperationType,
@@ -31,7 +32,7 @@ const flavors = {
   sqlite: new SQLiteFlavor(),
 };
 
-type TableSource = string | SelectQuery;
+export type TableSource = string | SelectQuery;
 
 export class Table implements ISequelizable, ISerializable {
   constructor(public source: TableSource, public alias?: string) {}
@@ -45,9 +46,10 @@ export class Table implements ISequelizable, ISerializable {
     return this.source.table?.getTableName();
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    const isSelect = isSelectQuery(this.source);
-    const tableName = escapeTable(this.source, flavor);
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    const table = this.source;
+    const isSelect = isSelectQuery(table);
+    const tableName = escapeTable(table, flavor, options);
     let alias = this.alias;
     if (isSelect && !alias) alias = "t";
     return `${tableName}${alias ? ` AS ${flavor.escapeColumn(alias)}` : ""}`;
@@ -79,8 +81,19 @@ export class Table implements ISequelizable, ISerializable {
 function isSelectQuery(table: TableSource): table is SelectQuery {
   return table instanceof SelectQuery;
 }
-export const escapeTable = (table: TableSource, flavor: ISQLFlavor): string => {
-  if (isSelectQuery(table)) return `(${table.toSQL(flavor)})`;
+export const escapeTable = (
+  table: TableSource,
+  flavor: ISQLFlavor,
+  options?: ISequelizableOptions
+): string => {
+  if (!isSelectQuery(table) && options?.transformTable) {
+    table = options.transformTable(table);
+  }
+  if (isSelectQuery(table))
+    return `(${table.toSQL(flavor, {
+      ...options,
+      transformTable: undefined,
+    })})`;
   return flavor.escapeTable(table);
 };
 
@@ -148,9 +161,11 @@ export class QueryBase implements ISequelizable, IMetadata {
     return clone;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     return this.tables.length > 0
-      ? `FROM ${this.tables.map((table) => table.toSQL(flavor)).join(",")}`
+      ? `FROM ${this.tables
+          .map((table) => table.toSQL(flavor, options))
+          .join(",")}`
       : "";
   }
 }
@@ -181,8 +196,8 @@ class Join {
     return this._table.getTableName();
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `${this._type} JOIN ${this._table.toSQL(flavor)}${
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `${this._type} JOIN ${this._table.toSQL(flavor, options)}${
       this._condition ? ` ON ${this._condition.toSQL(flavor)}` : ""
     }`;
   }
@@ -258,19 +273,19 @@ class SelectBaseQuery extends QueryBase {
     return clone.addFields(fields);
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     const columns =
       this._fields.length > 0
         ? this._fields
             .map(
               (f) =>
-                `${Expression.deserialize(f.name).toSQL(flavor)}${
+                `${Expression.deserialize(f.name).toSQL(flavor, options)}${
                   f.alias ? ` AS ${flavor.escapeColumn(f.alias)}` : ""
                 }`
             )
             .join(", ")
         : "*";
-    return `SELECT ${columns} ${super.toSQL(flavor)}`;
+    return `SELECT ${columns} ${super.toSQL(flavor, options)}`;
   }
 }
 
@@ -399,11 +414,21 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
     );
   }
 
-  toSQL(flavor: ISQLFlavor = flavors.mysql): string {
-    let sql = super.toSQL(flavor);
+  toSQL(
+    flavor: ISQLFlavor = flavors.mysql,
+    options?: ISequelizableOptions,
+    transformProcessed = false
+  ): string {
+    let sql = "";
+    if (options?.transformSelectQuery && !transformProcessed) {
+      const q = options.transformSelectQuery(this);
+      return q.toSQL(flavor, options, true);
+    } else {
+      sql = super.toSQL(flavor, options);
+    }
 
     if (this._joins?.length > 0) {
-      sql += ` ${this._joins.map((j) => j.toSQL(flavor)).join(" ")}`;
+      sql += ` ${this._joins.map((j) => j.toSQL(flavor, options)).join(" ")}`;
     }
     if (this._where.length > 0) {
       sql += ` WHERE ${this._where.map((w) => w.toSQL(flavor)).join(" AND ")}`;
@@ -430,7 +455,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
       sql = flavor.escapeUnion(
         unionQuery.type,
         sql,
-        unionQuery.query.toSQL(flavor)
+        unionQuery.query.toSQL(flavor, options)
       );
     });
     return sql;
