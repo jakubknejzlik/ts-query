@@ -33,7 +33,19 @@ describe("Query transformations", () => {
       "SELECT * FROM (SELECT * FROM `foo` INNER JOIN `bar` AS `b` ON `f`.`id` = `b`.`id`) AS `f1` LEFT JOIN `foo2` AS `f2` ON `f1`.`id` = `f2`.`id`"
     );
   });
-  it("should transform foo query table", () => {
+  it("should transform nested query table", () => {
+    const query = Query.select().from(Q.select().from("world"), "f1");
+    const sql = query.toSQL(flavor, {
+      transformTable: (table) => {
+        if (table === "world") {
+          return "hello_" + table;
+        }
+        return table;
+      },
+    });
+    expect(sql).toEqual("SELECT * FROM (SELECT * FROM `hello_world`) AS `f1`");
+  });
+  it("should transform foo query table and select query", () => {
     const query = Query.select()
       .from("foo", "f1")
       .leftJoin(Q.table("foo2", "f2"), Cond.columnEqual("f1.id", "f2.id"));

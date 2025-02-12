@@ -86,13 +86,14 @@ export const escapeTable = (
   flavor: ISQLFlavor,
   options?: ISequelizableOptions
 ): string => {
+  const isSelect = isSelectQuery(table);
   if (!isSelectQuery(table) && options?.transformTable) {
     table = options.transformTable(table);
   }
   if (isSelectQuery(table))
     return `(${table.toSQL(flavor, {
       ...options,
-      transformTable: undefined,
+      transformTable: isSelect ? options?.transformTable : undefined,
     })})`;
   return flavor.escapeTable(table);
 };
