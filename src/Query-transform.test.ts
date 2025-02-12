@@ -33,6 +33,26 @@ describe("Query transformations", () => {
       "SELECT * FROM (SELECT * FROM `foo` INNER JOIN `bar` AS `b` ON `f`.`id` = `b`.`id`) AS `f1` LEFT JOIN `foo2` AS `f2` ON `f1`.`id` = `f2`.`id`"
     );
   });
+  it("should transform table with subquery with proper alias", () => {
+    const query = Query.select().from("foo");
+    const query2 = Query.select().from("foo", "f");
+    const sql = query.toSQL(flavor, {
+      transformTable: (table) => {
+        return Q.select().from(table).where(Cond.equal("foo", "bar"));
+      },
+    });
+    const sql2 = query2.toSQL(flavor, {
+      transformTable: (table) => {
+        return Q.select().from(table).where(Cond.equal("foo", "bar"));
+      },
+    });
+    expect(sql).toEqual(
+      'SELECT * FROM (SELECT * FROM `foo` WHERE `foo` = "bar") AS `t`'
+    );
+    expect(sql2).toEqual(
+      'SELECT * FROM (SELECT * FROM `foo` WHERE `foo` = "bar") AS `f`'
+    );
+  });
   it("should transform nested query table", () => {
     const query = Query.select().from(Q.select().from("world"), "f1");
     const sql = query.toSQL(flavor, {

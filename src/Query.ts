@@ -47,10 +47,16 @@ export class Table implements ISequelizable, ISerializable {
   }
 
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
-    const table = this.source;
+    let table = this.source;
+
+    if (!isSelectQuery(table) && options?.transformTable) {
+      table = options.transformTable(table);
+      options = { ...options, transformTable: undefined };
+    }
+
     const isSelect = isSelectQuery(table);
-    const tableName = escapeTable(table, flavor, options);
     let alias = this.alias;
+    const tableName = escapeTable(table, flavor, options);
     if (isSelect && !alias) alias = "t";
     return `${tableName}${alias ? ` AS ${flavor.escapeColumn(alias)}` : ""}`;
   }
@@ -86,15 +92,7 @@ export const escapeTable = (
   flavor: ISQLFlavor,
   options?: ISequelizableOptions
 ): string => {
-  const isSelect = isSelectQuery(table);
-  if (!isSelectQuery(table) && options?.transformTable) {
-    table = options.transformTable(table);
-  }
-  if (isSelectQuery(table))
-    return `(${table.toSQL(flavor, {
-      ...options,
-      transformTable: isSelect ? options?.transformTable : undefined,
-    })})`;
+  if (isSelectQuery(table)) return `(${table.toSQL(flavor, options)})`;
   return flavor.escapeTable(table);
 };
 
