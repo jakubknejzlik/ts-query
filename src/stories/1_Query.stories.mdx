@@ -218,6 +218,25 @@ Q.select()
 `}
 />
 
+### Join with subquery
+
+You can also join with a subquery as a table source. This is useful for aggregating or filtering data before joining:
+
+<QueryPreview
+  code={`
+Q.select()
+  .from('users', 'u')
+  .leftJoin(
+    Q.table(Q.select()
+      .from('orders')
+      .addField(Fn.sum('price','totalPrice'))
+      .limit(10)
+    , 'o'),
+    Cond.columnEqual('u.id', 'o.user_id')
+  );
+`}
+/>
+
 ### WHERE Conditions
 
 Filtering the data you retrieve is a common operation. The `where` method allows you to specify conditions to limit the rows returned:
