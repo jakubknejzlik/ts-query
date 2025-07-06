@@ -38,3 +38,30 @@ return Q.deserialize(serialized).toSQL(Q.flavors.mysql);`}
 />
 
 Using serialization and deserialization, developers can build efficient client-server architectures where complex queries are created on the frontend and executed on the backend without direct SQL exposure, reducing potential SQL injection risks.
+
+# Compression
+
+You can also serialize with compression (gzip + base64 output):
+
+<CodePreview
+  code={`return Q.select().from('table').serialize({compress:true});`}
+/>
+
+In case of large queries it may be required to make the serialization output smaller (eg. AWS Lambda has payload size limit to 6MB). Following query serializes to large blob due to large number of fields:
+
+<CodePreview
+  code={`return Q.select().addFields(Array(2000).fill(null).map((_,i)=>({name:'field'+i}))).from('table').serialize().length;`}
+/>
+
+But when You use compression, You can make it smaller.
+
+<CodePreview
+  code={`return Q.select().addFields(Array(2000).fill(null).map((_,i)=>({name:'field'+i}))).from('table').serialize({compress:true}).length;`}
+/>
+
+The deserialize method handles the compressed payload automatically:
+
+<CodePreview
+  code={`const serialized = Q.select().from('table').serialize({compress:true});
+return Q.deserialize(serialized).toSQL(Q.flavors.mysql);`}
+/>

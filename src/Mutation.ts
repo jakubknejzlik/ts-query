@@ -2,6 +2,7 @@ import { Condition } from "./Condition";
 import { Expression } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q, SelectQuery, Table } from "./Query";
+import { compressString } from "./compression";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
@@ -86,8 +87,9 @@ export class DeleteMutation
     return sql;
   }
 
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  serialize(opts: { compress: boolean } = { compress: false }): string {
+    const json = JSON.stringify(this.toJSON());
+    return opts.compress ? compressString(json) : json;
   }
 
   toJSON() {
@@ -181,8 +183,9 @@ export class InsertMutation
     throw new Error("values or select must be set for insert query");
   }
 
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  serialize(opts: { compress: boolean } = { compress: false }): string {
+    const json = JSON.stringify(this.toJSON());
+    return opts.compress ? compressString(json) : json;
   }
 
   toJSON() {
@@ -281,8 +284,9 @@ export class UpdateMutation
     return sql;
   }
 
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  serialize(opts: { compress: boolean } = { compress: false }): string {
+    const json = JSON.stringify(this.toJSON());
+    return opts.compress ? compressString(json) : json;
   }
 
   toJSON() {

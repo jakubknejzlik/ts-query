@@ -1,4 +1,6 @@
 import { Dayjs, isDayjs } from "dayjs";
+import pako from "pako";
+import { compressString, decompressString } from "./compression";
 import { Condition } from "./Condition";
 import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { CreateViewAsSelect } from "./CreateViewAsSelect";
@@ -76,8 +78,9 @@ export class Table implements ISequelizable, ISerializable {
     }
     return new Table(json.source, json.alias);
   }
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  serialize(compress = false): string {
+    const json = JSON.stringify(this.toJSON());
+    return compress ? Buffer.from(pako.gzip(json)).toString("base64") : json;
   }
   static deserialize(json: string): Table {
     return Table.fromJSON(JSON.parse(json));
@@ -461,8 +464,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
 
   // serialization
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  serialize(opts: { compress: boolean } = { compress: false }): string {
+    const json = JSON.stringify(this.toJSON());
+    return opts.compress ? compressString(json) : json;
   }
   toJSON(): any {
     return {
@@ -544,9 +548,13 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
 }
 
-const deserialize = (json: string) => {
+const deserialize = (payload: string) => {
   try {
-    const parsed = JSON.parse(json);
+    const parsed =
+      payload[0] === "{"
+        ? JSON.parse(payload)
+        : JSON.parse(decompressString(payload));
+
     switch (parsed.type as OperationType) {
       case OperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
