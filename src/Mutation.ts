@@ -9,6 +9,7 @@ import {
   ISequelizable,
   ISequelizableOptions,
   ISerializable,
+  ISerializableOptions,
   MetadataOperationType,
   OperationType,
 } from "./interfaces";
@@ -87,7 +88,7 @@ export class DeleteMutation
     return sql;
   }
 
-  serialize(opts: { compress: boolean } = { compress: false }): string {
+  serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
@@ -183,7 +184,7 @@ export class InsertMutation
     throw new Error("values or select must be set for insert query");
   }
 
-  serialize(opts: { compress: boolean } = { compress: false }): string {
+  serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
@@ -284,7 +285,7 @@ export class UpdateMutation
     return sql;
   }
 
-  serialize(opts: { compress: boolean } = { compress: false }): string {
+  serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
   }

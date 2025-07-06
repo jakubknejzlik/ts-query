@@ -21,6 +21,7 @@ import {
   ISequelizable,
   ISequelizableOptions,
   ISerializable,
+  ISerializableOptions,
   MetadataOperationType,
   OperationType,
 } from "./interfaces";
@@ -78,9 +79,8 @@ export class Table implements ISequelizable, ISerializable {
     }
     return new Table(json.source, json.alias);
   }
-  serialize(compress = false): string {
-    const json = JSON.stringify(this.toJSON());
-    return compress ? Buffer.from(pako.gzip(json)).toString("base64") : json;
+  serialize(): string {
+    return JSON.stringify(this.toJSON());
   }
   static deserialize(json: string): Table {
     return Table.fromJSON(JSON.parse(json));
@@ -464,7 +464,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
   }
 
   // serialization
-  serialize(opts: { compress: boolean } = { compress: false }): string {
+  serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
   }

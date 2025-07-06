@@ -18,8 +18,11 @@ export interface ISequelizableOptions {
 export interface ISequelizable {
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string;
 }
+export interface ISerializableOptions {
+  compress?: boolean;
+}
 export interface ISerializable {
-  serialize(): string;
+  serialize(opts: ISerializableOptions): string;
 }
 
 export enum MetadataOperationType {
