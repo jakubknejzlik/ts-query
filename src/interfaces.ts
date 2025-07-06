@@ -1,10 +1,5 @@
 import { ISQLFlavor } from "./Flavor";
-import {
-  DeleteMutation,
-  InsertMutation,
-  MutationBase,
-  UpdateMutation,
-} from "./Mutation";
+import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 import { SelectQuery, TableSource } from "./Query";
 
 export interface ISequelizableOptions {
@@ -22,7 +17,7 @@ export interface ISerializableOptions {
   compress?: boolean;
 }
 export interface ISerializable {
-  serialize(opts: ISerializableOptions): string;
+  serialize(opts?: ISerializableOptions): string;
 }
 
 export enum MetadataOperationType {
