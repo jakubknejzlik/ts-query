@@ -34,6 +34,8 @@ export class Condition implements ISequelizable, ISerializable {
         return LikeCondition.fromJSON(json);
       case "ColumnComparisonCondition":
         return ColumnComparisonCondition.fromJSON(json);
+      case "NotCondition":
+        return NotCondition.fromJSON(json);
       default:
         throw new Error(
           `Unknown condition type: ${json.type} (${JSON.stringify(json)})`
@@ -331,6 +333,31 @@ class ColumnComparisonCondition extends Condition {
   }
 }
 
+class NotCondition extends Condition {
+  condition: Condition;
+
+  constructor(condition: Condition) {
+    super();
+    this.condition = condition;
+  }
+
+  toSQL(flavor: ISQLFlavor): string {
+    return `NOT (${this.condition.toSQL(flavor)})`;
+  }
+
+  // serialization
+  toJSON(): any {
+    return {
+      type: "NotCondition",
+      condition: this.condition.toJSON(),
+    };
+  }
+
+  static fromJSON(json: any): NotCondition {
+    return new NotCondition(Condition.fromJSON(json.condition));
+  }
+}
+
 export const Conditions = {
   fromString: (column: string, value: string | number): Condition => {
     const str = `${value}`;
@@ -406,5 +433,6 @@ export const Conditions = {
     new ColumnComparisonCondition(leftKey, rightKey, ">="),
   columnLessThanOrEqual: (leftKey: string, rightKey: string) =>
     new ColumnComparisonCondition(leftKey, rightKey, "<="),
+  not: (condition: Condition) => new NotCondition(condition),
 };
 export { Conditions as Cond };

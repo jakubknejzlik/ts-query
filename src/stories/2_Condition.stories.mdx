@@ -188,6 +188,44 @@ Cond.notLike('foo', 'He_lo wor%');
 `}
 />
 
+### NOT
+
+To negate any condition:
+
+<QueryPreview
+  code={`
+Cond.not(Cond.equal('foo', 123));
+`}
+/>
+
+You can negate complex conditions:
+
+<QueryPreview
+  code={`
+Cond.not(
+  Cond.and([
+    Cond.equal('status', 'active'),
+    Cond.greaterThan('age', 18)
+  ])
+);
+`}
+/>
+
+Or negate other condition types:
+
+<QueryPreview
+  code={`
+// NOT (foo IN (1, 2, 3))
+Cond.not(Cond.in('foo', [1, 2, 3]));
+
+// NOT (price BETWEEN 10 AND 50)
+Cond.not(Cond.between('price', [10, 50]));
+
+// NOT (name LIKE '%test%')
+Cond.not(Cond.like('name', '%test%'));
+`}
+/>
+
 ## Conditions with functions
 
 To check if a column's value does not match a pattern:

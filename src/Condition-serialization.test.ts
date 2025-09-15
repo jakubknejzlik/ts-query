@@ -1,4 +1,4 @@
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { Condition, Conditions } from "./Condition";
 import { Q } from "./Query";
 
@@ -136,5 +136,41 @@ describe("Condition Serialization and Deserialization", () => {
     const serialized = condition.toJSON();
     const deserialized = Condition.fromJSON(serialized);
     expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
+  // NOT
+  it("should serialize and deserialize not condition", () => {
+    const condition = Conditions.not(Conditions.equal("foo", 123));
+    const serialized = condition.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
+  it("should serialize and deserialize complex not condition", () => {
+    const andCondition = Conditions.and([
+      Conditions.equal("foo", 123),
+      Conditions.greaterThan("bar", 50),
+    ]);
+    const condition = Conditions.not(andCondition!);
+    const serialized = condition.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
+  it("should serialize and deserialize nested not condition", () => {
+    const innerNot = Conditions.not(Conditions.equal("foo", 123));
+    const condition = Conditions.not(innerNot);
+    const serialized = condition.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
+  it("should handle round-trip serialization of not condition", () => {
+    const condition = Conditions.not(Conditions.in("foo", [1, 2, 3])!);
+    const firstSerialized = condition.toJSON();
+    const firstDeserialized = Condition.fromJSON(firstSerialized);
+    const secondSerialized = firstDeserialized.toJSON();
+    const secondDeserialized = Condition.fromJSON(secondSerialized);
+    expect(secondDeserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
   });
 });

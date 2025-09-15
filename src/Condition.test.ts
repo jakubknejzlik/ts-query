@@ -132,6 +132,56 @@ describe("Condition", () => {
       "`foo` NOT LIKE 'He_lo wor%'"
     );
   });
+
+  // NOT
+  it("should format not", () => {
+    expect(Cond.not(Cond.equal("foo", 123)).toSQL(flavor)).toEqual(
+      "NOT (`foo` = 123)"
+    );
+    expect(Cond.not(Cond.greaterThan("bar", 50)).toSQL(flavor)).toEqual(
+      "NOT (`bar` > 50)"
+    );
+  });
+
+  it("should format not with complex conditions", () => {
+    const andCondition = Cond.and([
+      Cond.equal("foo", 123),
+      Cond.greaterThan("bar", 50),
+    ]);
+    expect(Cond.not(andCondition!).toSQL(flavor)).toEqual(
+      "NOT ((`foo` = 123 AND `bar` > 50))"
+    );
+
+    const orCondition = Cond.or([
+      Cond.equal("foo", 123),
+      Cond.lessThan("bar", 50),
+    ]);
+    expect(Cond.not(orCondition!).toSQL(flavor)).toEqual(
+      "NOT ((`foo` = 123 OR `bar` < 50))"
+    );
+  });
+
+  it("should format nested not conditions", () => {
+    const notCondition = Cond.not(Cond.equal("foo", 123));
+    expect(Cond.not(notCondition).toSQL(flavor)).toEqual(
+      "NOT (NOT (`foo` = 123))"
+    );
+  });
+
+  it("should format not with other condition types", () => {
+    expect(Cond.not(Cond.null("foo")).toSQL(flavor)).toEqual(
+      "NOT (`foo` IS NULL)"
+    );
+    expect(Cond.not(Cond.in("foo", [1, 2, 3])!).toSQL(flavor)).toEqual(
+      "NOT (`foo` IN (1, 2, 3))"
+    );
+    expect(Cond.not(Cond.between("foo", [1, 10])).toSQL(flavor)).toEqual(
+      "NOT (`foo` BETWEEN 1 AND 10)"
+    );
+    expect(Cond.not(Cond.like("foo", "%test%")).toSQL(flavor)).toEqual(
+      "NOT (`foo` LIKE '%test%')"
+    );
+  });
 });
 
 describe("Conditions.fromString", () => {
