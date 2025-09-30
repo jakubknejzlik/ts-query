@@ -34,6 +34,18 @@ describe("CreateTableAsSelect", () => {
     );
   });
 
+  it("should serialize and deserialize correctly with compression", () => {
+    const ctas = Q.createTableAs(tableName, initialSelectQuery);
+
+    const serializedCompressed = ctas.serialize({ compress: true });
+    const deserializedCompressed = Q.deserialize(serializedCompressed);
+
+    expect(deserializedCompressed).toEqual(ctas);
+    expect(deserializedCompressed.toSQL(new MySQLFlavor())).toBe(
+      ctas.toSQL(new MySQLFlavor())
+    );
+  });
+
   it("should fetch table names correctly", () => {
     const ctas = Q.createTableAs(tableName, initialSelectQuery);
     expect(ctas.getTableNames()).toEqual([tableName, "users"]);

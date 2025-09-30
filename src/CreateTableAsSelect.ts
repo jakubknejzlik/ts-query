@@ -1,10 +1,12 @@
 import { ISQLFlavor } from "./Flavor";
 import { SelectQuery } from "./Query";
+import { compressString } from "./compression";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
   ISerializable,
+  ISerializableOptions,
   MetadataOperationType,
   OperationType,
 } from "./interfaces";
@@ -32,8 +34,10 @@ export class CreateTableAsSelect
     )} AS ${this._select.toSQL(flavor)}`;
   }
 
-  serialize(): string {
-    return JSON.stringify(this.toJSON());
+  // serialization
+  serialize(opts: ISerializableOptions = { compress: false }): string {
+    const json = JSON.stringify(this.toJSON());
+    return opts.compress ? compressString(json) : json;
   }
 
   toJSON() {
