@@ -42,6 +42,27 @@ describe("CreateViewAsSelect", () => {
     ).toEqual(cvasReplace.toSQL(new MySQLFlavor()));
   });
 
+  it("should serialize and deserialize correctly with compression", () => {
+    const cvas = Q.createViewAs(viewName, initialSelectQuery);
+    const cvasReplace = Q.createOrReplaceViewAs(viewName, initialSelectQuery);
+
+    const serializedCompressed = cvas.serialize({ compress: true });
+    const deserializedCompressed = Q.deserialize(serializedCompressed);
+    expect(deserializedCompressed.toSQL(new MySQLFlavor())).toEqual(
+      cvas.toSQL(new MySQLFlavor())
+    );
+
+    const serializedReplaceCompressed = cvasReplace.serialize({
+      compress: true,
+    });
+    const deserializedReplaceCompressed = Q.deserialize(
+      serializedReplaceCompressed
+    );
+    expect(deserializedReplaceCompressed.toSQL(new MySQLFlavor())).toEqual(
+      cvasReplace.toSQL(new MySQLFlavor())
+    );
+  });
+
   it("should fetch table names correctly", () => {
     const cvas = Q.createViewAs(viewName, initialSelectQuery);
     expect(cvas.getTableNames()).toEqual([viewName, "users"]);
