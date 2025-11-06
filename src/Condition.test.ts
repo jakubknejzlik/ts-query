@@ -119,6 +119,16 @@ describe("Condition", () => {
     expect(Cond.notNull("foo").toSQL(flavor)).toEqual("`foo` IS NOT NULL");
   });
 
+  // IS NULL
+  it("should format isNull", () => {
+    expect(Cond.isNull("foo").toSQL(flavor)).toEqual("`foo` IS NULL");
+  });
+
+  // IS NOT NULL
+  it("should format isNotNull", () => {
+    expect(Cond.isNotNull("foo").toSQL(flavor)).toEqual("`foo` IS NOT NULL");
+  });
+
   // LIKE
   it("should format like", () => {
     expect(Cond.like("foo", "He_lo wor%").toSQL(flavor)).toEqual(

@@ -428,7 +428,11 @@ export const Conditions = {
     const _c = (conditions || []).filter((c) => c !== null);
     return _c.length > 0 ? new LogicalCondition(_c, "OR") : null;
   },
+  isNull: (key: string) => new NullCondition(key, true),
+  isNotNull: (key: string) => new NullCondition(key, false),
+  // Deprecated: use isNull instead
   null: (key: string) => new NullCondition(key, true),
+  // Deprecated: use isNotNull instead
   notNull: (key: string) => new NullCondition(key, false),
   like: (key: string, pattern: string) => new LikeCondition(key, pattern, true),
   notLike: (key: string, pattern: string) =>
