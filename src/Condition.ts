@@ -359,7 +359,11 @@ class NotCondition extends Condition {
 }
 
 export const Conditions = {
-  fromString: (column: string, value: string | number): Condition => {
+  fromString: (
+    column: string,
+    value: string | number,
+    delimiters: string[] = [" "]
+  ): Condition => {
     const str = `${value}`;
     if (str.indexOf(">=") === 0) {
       return Conditions.greaterThanOrEqual(column, str.substring(2));
@@ -374,16 +378,24 @@ export const Conditions = {
       return Conditions.lessThan(column, str.substring(1));
     }
     if (str.indexOf("~") === 0) {
-      return Conditions.or([
-        Conditions.like(column, `${str.substring(1)}%`),
-        Conditions.like(column, `% ${str.substring(1)}%`),
-      ]);
+      const searchValue = str.substring(1);
+      const conditions = [Conditions.like(column, `${searchValue}%`)];
+      for (const delimiter of delimiters) {
+        conditions.push(
+          Conditions.like(column, `%${delimiter}${searchValue}%`)
+        );
+      }
+      return Conditions.or(conditions);
     }
     if (str.indexOf("!~") === 0) {
-      return Conditions.and([
-        Conditions.notLike(column, `${str.substring(2)}%`),
-        Conditions.notLike(column, `% ${str.substring(2)}%`),
-      ]);
+      const searchValue = str.substring(2);
+      const conditions = [Conditions.notLike(column, `${searchValue}%`)];
+      for (const delimiter of delimiters) {
+        conditions.push(
+          Conditions.notLike(column, `%${delimiter}${searchValue}%`)
+        );
+      }
+      return Conditions.and(conditions);
     }
     if (str.indexOf("!") === 0) {
       return Conditions.notEqual(column, `${str.substring(1)}%`);
