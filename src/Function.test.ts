@@ -157,4 +157,99 @@ describe("Expression", () => {
       "IF(`a` < 30,`a`,`b`)"
     );
   });
+
+  describe("concat", () => {
+    it("should concatenate two values", () => {
+      expect(Fn.concat("firstName", "lastName").toSQL(flavor)).toEqual(
+        "CONCAT(`firstName`,`lastName`)"
+      );
+    });
+
+    it("should concatenate multiple values", () => {
+      expect(
+        Fn.concat("firstName", Q.value(" "), "lastName").toSQL(flavor)
+      ).toEqual('CONCAT(`firstName`," ",`lastName`)');
+    });
+
+    it("should concatenate with string literals", () => {
+      expect(
+        Fn.concat(Q.S`Hello`, Q.S` `, Q.S`World`).toSQL(flavor)
+      ).toEqual('CONCAT("Hello"," ","World")');
+    });
+
+    it("should concatenate mixed types", () => {
+      expect(
+        Fn.concat("title", Q.S`: `, "description", Q.S` - `, Q.value(2024)).toSQL(
+          flavor
+        )
+      ).toEqual('CONCAT(`title`,": ",`description`," - ",2024)');
+    });
+
+    it("should work with many arguments", () => {
+      expect(
+        Fn.concat("a", "b", "c", "d", "e").toSQL(flavor)
+      ).toEqual("CONCAT(`a`,`b`,`c`,`d`,`e`)");
+    });
+
+    it("should work across different SQL flavors", () => {
+      const mysqlFlavor = Q.flavors.mysql;
+      const sqliteFlavor = Q.flavors.sqlite;
+
+      expect(Fn.concat("a", "b").toSQL(mysqlFlavor)).toEqual(
+        "CONCAT(`a`,`b`)"
+      );
+      expect(Fn.concat("a", "b").toSQL(sqliteFlavor)).toEqual(
+        "CONCAT(`a`,`b`)"
+      );
+    });
+
+    it("should support composition with other functions", () => {
+      expect(
+        Fn.concat(Fn.year("date"), Q.S`-`, Fn.month("date")).toSQL(
+          flavor
+        )
+      ).toEqual('CONCAT(YEAR(`date`),"-",MONTH(`date`))');
+    });
+
+    it("should work inside other functions", () => {
+      expect(
+        Fn.ifnull(Fn.concat("firstName", Q.S` `, "lastName"), Q.S`Unknown`).toSQL(
+          flavor
+        )
+      ).toEqual('IFNULL(CONCAT(`firstName`," ",`lastName`),"Unknown")');
+    });
+
+    it("should support serialization", () => {
+      const query = Q.select().addField(
+        Fn.concat("firstName", Q.S` `, "lastName"),
+        "fullName"
+      );
+      const serialized = query.serialize();
+      const deserialized = Q.deserialize(serialized);
+
+      expect(deserialized.toSQL(flavor)).toEqual(query.toSQL(flavor));
+      expect(deserialized.toSQL(flavor)).toEqual(
+        'SELECT CONCAT(`firstName`," ",`lastName`) AS `fullName` '
+      );
+    });
+
+    it("should serialize complex concat expressions", () => {
+      const query = Q.select().addField(
+        Fn.ifnull(
+          Fn.concat(
+            Fn.year("date"),
+            Q.S`-`,
+            Fn.month("date")
+          ),
+          Q.S`N/A`
+        ),
+        "displayName"
+      );
+
+      const serialized = query.serialize();
+      const deserialized = Q.deserialize(serialized);
+
+      expect(deserialized.toSQL(flavor)).toEqual(query.toSQL(flavor));
+    });
+  });
 });
