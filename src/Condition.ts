@@ -268,9 +268,7 @@ class LikeCondition extends Condition {
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} ${this.isLike ? "" : "NOT "}LIKE \'${
-      this.pattern
-    }\'`;
+    return `${this.key.toSQL(flavor)} ${this.isLike ? "" : "NOT "}LIKE ${flavor.escapeValue(this.pattern)}`;
   }
 
   // serialization

@@ -132,15 +132,26 @@ describe("Condition", () => {
   // LIKE
   it("should format like", () => {
     expect(Cond.like("foo", "He_lo wor%").toSQL(flavor)).toEqual(
-      "`foo` LIKE 'He_lo wor%'"
+      '`foo` LIKE "He_lo wor%"'
     );
   });
 
   // NOT LIKE
   it("should format like", () => {
     expect(Cond.notLike("foo", "He_lo wor%").toSQL(flavor)).toEqual(
-      "`foo` NOT LIKE 'He_lo wor%'"
+      '`foo` NOT LIKE "He_lo wor%"'
     );
+  });
+
+  // LIKE - SQL injection prevention
+  it("should escape quotes in LIKE pattern to prevent SQL injection", () => {
+    // Attempt SQL injection via pattern
+    const maliciousPattern = '"; DROP TABLE users; --';
+    const sql = Cond.like("foo", maliciousPattern).toSQL(flavor);
+    // Pattern should be escaped - quotes should be doubled ("" instead of ")
+    expect(sql).toEqual('`foo` LIKE """; DROP TABLE users; --"');
+    // The quote is escaped (doubled) so it can't break out of the string literal
+    expect(sql).toContain('""');
   });
 
   // NOT
@@ -189,7 +200,7 @@ describe("Condition", () => {
       "NOT (`foo` BETWEEN 1 AND 10)"
     );
     expect(Cond.not(Cond.like("foo", "%test%")).toSQL(flavor)).toEqual(
-      "NOT (`foo` LIKE '%test%')"
+      'NOT (`foo` LIKE "%test%")'
     );
   });
 });
@@ -223,54 +234,54 @@ describe("Conditions.fromString", () => {
   it("should use default space delimiter for ~ operator", () => {
     const condition = Cond.fromString("column", "~test");
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` LIKE 'test%'");
-    expect(sql).toContain("`column` LIKE '% test%'");
+    expect(sql).toContain('`column` LIKE "test%"');
+    expect(sql).toContain('`column` LIKE "% test%"');
     expect(sql).toMatch(/OR/);
   });
 
   it("should support multiple delimiters for ~ operator", () => {
     const condition = Cond.fromString("column", "~test", [" ", ","]);
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` LIKE 'test%'");
-    expect(sql).toContain("`column` LIKE '% test%'");
-    expect(sql).toContain("`column` LIKE '%,test%'");
+    expect(sql).toContain('`column` LIKE "test%"');
+    expect(sql).toContain('`column` LIKE "% test%"');
+    expect(sql).toContain('`column` LIKE "%,test%"');
     expect(sql).toMatch(/OR/);
   });
 
   it("should support custom delimiters for ~ operator", () => {
     const condition = Cond.fromString("column", "~test", ["-", "_", "."]);
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` LIKE 'test%'");
-    expect(sql).toContain("`column` LIKE '%-test%'");
-    expect(sql).toContain("`column` LIKE '%_test%'");
-    expect(sql).toContain("`column` LIKE '%.test%'");
+    expect(sql).toContain('`column` LIKE "test%"');
+    expect(sql).toContain('`column` LIKE "%-test%"');
+    expect(sql).toContain('`column` LIKE "%_test%"');
+    expect(sql).toContain('`column` LIKE "%.test%"');
     expect(sql).toMatch(/OR/);
   });
 
   it("should use default space delimiter for !~ operator", () => {
     const condition = Cond.fromString("column", "!~test");
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` NOT LIKE 'test%'");
-    expect(sql).toContain("`column` NOT LIKE '% test%'");
+    expect(sql).toContain('`column` NOT LIKE "test%"');
+    expect(sql).toContain('`column` NOT LIKE "% test%"');
     expect(sql).toMatch(/AND/);
   });
 
   it("should support multiple delimiters for !~ operator", () => {
     const condition = Cond.fromString("column", "!~test", [" ", ","]);
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` NOT LIKE 'test%'");
-    expect(sql).toContain("`column` NOT LIKE '% test%'");
-    expect(sql).toContain("`column` NOT LIKE '%,test%'");
+    expect(sql).toContain('`column` NOT LIKE "test%"');
+    expect(sql).toContain('`column` NOT LIKE "% test%"');
+    expect(sql).toContain('`column` NOT LIKE "%,test%"');
     expect(sql).toMatch(/AND/);
   });
 
   it("should support custom delimiters for !~ operator", () => {
     const condition = Cond.fromString("column", "!~test", ["-", "_", "."]);
     const sql = condition!.toSQL(flavor);
-    expect(sql).toContain("`column` NOT LIKE 'test%'");
-    expect(sql).toContain("`column` NOT LIKE '%-test%'");
-    expect(sql).toContain("`column` NOT LIKE '%_test%'");
-    expect(sql).toContain("`column` NOT LIKE '%.test%'");
+    expect(sql).toContain('`column` NOT LIKE "test%"');
+    expect(sql).toContain('`column` NOT LIKE "%-test%"');
+    expect(sql).toContain('`column` NOT LIKE "%_test%"');
+    expect(sql).toContain('`column` NOT LIKE "%.test%"');
     expect(sql).toMatch(/AND/);
   });
 });
