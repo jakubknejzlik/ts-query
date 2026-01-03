@@ -21,11 +21,17 @@ export class SQLiteFlavor extends MySQLFlavor {
       const argsValues = fn.value.map((x) =>
         ExpressionBase.deserializeValue(x)
       );
-      return `DateTime(${args[0]}, '${
-        parseInt(argsValues[1].value.toString(), 10) >= 0
-          ? "+" + argsValues[1].value.toString()
-          : argsValues[1].value.toString()
-      } ${argsValues[2].value.toString()}')`;
+      const interval = parseInt(argsValues[1].value.toString(), 10);
+      if (isNaN(interval)) {
+        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+      }
+      const intervalType = argsValues[2].value.toString().toLowerCase();
+      // SQLite supports: years, months, days, hours, minutes, seconds
+      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'years', 'months', 'days', 'hours', 'minutes', 'seconds'];
+      if (!validIntervalTypes.includes(intervalType)) {
+        throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
+      }
+      return `DateTime(${args[0]}, '${interval >= 0 ? "+" + interval : interval} ${intervalType}')`;
     }
     return super.escapeFunction(fn);
   }

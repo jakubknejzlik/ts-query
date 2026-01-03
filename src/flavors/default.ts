@@ -45,7 +45,33 @@ export class DefaultFlavor implements ISQLFlavor {
           this.columnQuotes
         }`;
       }
-      return `${name}`;
+      // In legacy mode, allow through values that appear to be:
+      // - Already escaped (contains column quotes)
+      // - Complex expressions (parentheses, operators, spaces)
+      // - String literals (already quoted with string quotes)
+      // - Special values like *, +0, -1, TRUE, FALSE
+      if (
+        name.includes(this.columnQuotes) ||
+        name.includes(this.stringQuotes) ||
+        name.includes('(') ||
+        name.includes(')') ||
+        name.includes(' ') ||
+        name.includes(',') ||
+        /^[+\-]?\d+$/.test(name) ||
+        /^[*]$/.test(name) ||
+        name === 'TRUE' ||
+        name === 'FALSE'
+      ) {
+        return `${name}`;
+      }
+      // Escape the column name to prevent SQL injection
+      return `${this.columnQuotes}${name
+        .replace(
+          new RegExp(this.columnQuotes, "g"),
+          `${this.columnQuotes}${this.columnQuotes}`
+        )
+        .split(".")
+        .join(`${this.columnQuotes}.${this.columnQuotes}`)}${this.columnQuotes}`;
     }
     return `${this.columnQuotes}${name
       .split(".")
@@ -99,9 +125,17 @@ export class DefaultFlavor implements ISQLFlavor {
       const argsValues = fn.value.map((x) =>
         ExpressionBase.deserializeValue(x)
       );
-      return `DATE_ADD(${args[0]}, INTERVAL ${
-        argsValues[1].value
-      } ${argsValues[2].value.toString().toUpperCase()})`;
+      const interval = parseInt(argsValues[1].value.toString(), 10);
+      if (isNaN(interval)) {
+        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+      }
+      const intervalType = argsValues[2].value.toString().toLowerCase();
+      // MySQL supports: YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, WEEK, QUARTER
+      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'week', 'quarter'];
+      if (!validIntervalTypes.includes(intervalType)) {
+        throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
+      }
+      return `DATE_ADD(${args[0]}, INTERVAL ${interval} ${intervalType.toUpperCase()})`;
     }
     return `${fn.name}(${args.join(",")})`;
   }

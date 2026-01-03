@@ -23,8 +23,15 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
       const argsValues = fn.value.map((x) =>
         ExpressionBase.deserializeValue(x)
       );
-      const interval = argsValues[1].value.toString();
-      const intervalType = argsValues[2].value.toString();
+      const interval = parseInt(argsValues[1].value.toString(), 10);
+      if (isNaN(interval)) {
+        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+      }
+      const intervalType = argsValues[2].value.toString().toLowerCase();
+      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'week', 'quarter'];
+      if (!validIntervalTypes.includes(intervalType)) {
+        throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
+      }
       return `date_add('${intervalType}', ${interval}, ${args[0]})`;
     }
     return super.escapeFunction(fn);
