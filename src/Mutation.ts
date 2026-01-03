@@ -5,7 +5,9 @@ import { Q, SelectQuery, Table } from "./Query";
 import { compressString } from "./compression";
 import { MySQLFlavor } from "./flavors/mysql";
 import {
+  ICompilable,
   IMetadata,
+  IQueryTarget,
   ISequelizable,
   ISequelizableOptions,
   ISerializable,
@@ -22,6 +24,11 @@ export class MutationBase {
 
   constructor(table: string, alias?: string) {
     this._table = new Table(table, alias);
+  }
+
+  // AST getter for targets
+  public getTable(): Table {
+    return this._table;
   }
 
   public getTableNames(): string[] {
@@ -51,12 +58,17 @@ export class MutationBase {
 
 export class DeleteMutation
   extends MutationBase
-  implements ISerializable, ISequelizable, IMetadata
+  implements ISerializable, ISequelizable, IMetadata, ICompilable
 {
   protected _where: Condition[] = [];
 
   public getOperationType(): MetadataOperationType {
     return MetadataOperationType.DELETE;
+  }
+
+  // AST getter for targets
+  public getWhere(): Condition[] {
+    return this._where;
   }
 
   public clone(): this {
@@ -88,6 +100,13 @@ export class DeleteMutation
     return sql;
   }
 
+  /**
+   * Compile this mutation using the provided target.
+   */
+  compile<T>(target: IQueryTarget<T>): T {
+    return target.compileDelete(this);
+  }
+
   serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
@@ -112,13 +131,21 @@ export class DeleteMutation
 
 export class InsertMutation
   extends MutationBase
-  implements ISerializable, ISequelizable, IMetadata
+  implements ISerializable, ISequelizable, IMetadata, ICompilable
 {
   protected _values?: RowRecord[];
   protected _selectWithColumns: [SelectQuery, string[] | undefined];
 
   public getOperationType(): MetadataOperationType {
     return MetadataOperationType.INSERT;
+  }
+
+  // AST getters for targets
+  public getValues(): RowRecord[] | undefined {
+    return this._values;
+  }
+  public getSelectWithColumns(): [SelectQuery, string[] | undefined] | undefined {
+    return this._selectWithColumns;
   }
 
   public clone(): this {
@@ -184,6 +211,13 @@ export class InsertMutation
     throw new Error("values or select must be set for insert query");
   }
 
+  /**
+   * Compile this mutation using the provided target.
+   */
+  compile<T>(target: IQueryTarget<T>): T {
+    return target.compileInsert(this);
+  }
+
   serialize(opts: ISerializableOptions = { compress: false }): string {
     const json = JSON.stringify(this.toJSON());
     return opts.compress ? compressString(json) : json;
@@ -216,13 +250,21 @@ export class InsertMutation
 
 export class UpdateMutation
   extends MutationBase
-  implements ISerializable, ISequelizable, IMetadata
+  implements ISerializable, ISequelizable, IMetadata, ICompilable
 {
   protected _values: RowRecord = {};
   protected _where: Condition[] = [];
 
   public getOperationType(): MetadataOperationType {
     return MetadataOperationType.UPDATE;
+  }
+
+  // AST getters for targets
+  public getSetValues(): RowRecord {
+    return this._values;
+  }
+  public getWhere(): Condition[] {
+    return this._where;
   }
 
   public clone(): this {
@@ -283,6 +325,13 @@ export class UpdateMutation
         .join(" AND ")}`;
     }
     return sql;
+  }
+
+  /**
+   * Compile this mutation using the provided target.
+   */
+  compile<T>(target: IQueryTarget<T>): T {
+    return target.compileUpdate(this);
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {

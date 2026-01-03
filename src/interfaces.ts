@@ -13,6 +13,39 @@ export interface ISequelizableOptions {
 export interface ISequelizable {
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string;
 }
+
+/**
+ * Generic query target interface for compiling queries to different backends.
+ * TOutput is the type returned by the target (e.g., string for SQL, object for DynamoDB params)
+ */
+export interface IQueryTarget<TOutput> {
+  /**
+   * Compile a SELECT query to the target format
+   */
+  compileSelect(query: SelectQuery): TOutput;
+
+  /**
+   * Compile an INSERT mutation to the target format
+   */
+  compileInsert(mutation: InsertMutation): TOutput;
+
+  /**
+   * Compile an UPDATE mutation to the target format
+   */
+  compileUpdate(mutation: UpdateMutation): TOutput;
+
+  /**
+   * Compile a DELETE mutation to the target format
+   */
+  compileDelete(mutation: DeleteMutation): TOutput;
+}
+
+/**
+ * Interface for objects that can be compiled to a target format
+ */
+export interface ICompilable {
+  compile<T>(target: IQueryTarget<T>): T;
+}
 export interface ISerializableOptions {
   compress?: boolean;
 }
