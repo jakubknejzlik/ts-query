@@ -17,7 +17,9 @@ import { MySQLFlavor } from "./flavors/mysql";
 import { SQLiteFlavor } from "./flavors/sqlite";
 import { Fn } from "./Function";
 import {
+  ICompilable,
   IMetadata,
+  IQueryTarget,
   ISequelizable,
   ISequelizableOptions,
   ISerializable,
@@ -172,9 +174,9 @@ export class QueryBase implements ISequelizable, IMetadata {
   }
 }
 
-type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL" | "CROSS";
+export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL" | "CROSS";
 
-class Join {
+export class Join {
   protected _type: JoinType;
   protected _table: Table;
   protected _condition?: Condition;
@@ -183,6 +185,17 @@ class Join {
     this._table = table;
     this._condition = condition;
     this._type = type;
+  }
+
+  // AST getters for targets
+  public getType(): JoinType {
+    return this._type;
+  }
+  public getTable(): Table {
+    return this._table;
+  }
+  public getCondition(): Condition | undefined {
+    return this._condition;
   }
 
   public clone(): this {
@@ -227,18 +240,26 @@ class Join {
   }
 }
 
-interface SelectField {
+export interface SelectField {
   name: ExpressionValue;
   alias?: string;
 }
 
-interface Order {
+export interface OrderClause {
   field: ExpressionBase;
   direction: "ASC" | "DESC";
 }
 
+// Alias for backward compatibility
+type Order = OrderClause;
+
 class SelectBaseQuery extends QueryBase {
   protected _fields: SelectField[] = [];
+
+  // AST getter for targets
+  public getFields(): SelectField[] {
+    return this._fields;
+  }
 
   public clone(): this {
     const clone = super.clone();
@@ -296,7 +317,7 @@ export enum UnionType {
   UNION_ALL = "UNION ALL",
 }
 
-export class SelectQuery extends SelectBaseQuery implements ISerializable {
+export class SelectQuery extends SelectBaseQuery implements ISerializable, ICompilable {
   protected _where: Condition[] = [];
   protected _having: Condition[] = [];
   protected _limit?: number;
@@ -318,6 +339,20 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
       type: u.type,
     }));
     return clone;
+  }
+
+  // AST getters for targets
+  public getWhere(): Condition[] {
+    return this._where;
+  }
+  public getHaving(): Condition[] {
+    return this._having;
+  }
+  public getJoins(): Join[] {
+    return this._joins;
+  }
+  public getUnionQueries(): { query: SelectQuery; type: UnionType }[] {
+    return this._unionQueries;
   }
 
   where(condition: Condition | null): this {
@@ -461,6 +496,15 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable {
       );
     });
     return sql;
+  }
+
+  /**
+   * Compile this query using the provided target.
+   * @param target The query target to use for compilation
+   * @returns The compiled output in the target's format
+   */
+  compile<T>(target: IQueryTarget<T>): T {
+    return target.compileSelect(this);
   }
 
   // serialization
