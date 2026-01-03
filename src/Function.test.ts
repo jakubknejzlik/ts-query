@@ -253,3 +253,48 @@ describe("Expression", () => {
     });
   });
 });
+
+describe("SQL Injection Prevention", () => {
+  it("should reject invalid DATEADD interval types", () => {
+    const maliciousIntervalType = "year'); DROP TABLE users; --";
+    expect(() => {
+      Fn.dateAdd("date", 1, maliciousIntervalType as any).toSQL(flavor);
+    }).toThrow("Invalid DATEADD interval type");
+  });
+
+  it("should sanitize DATEADD interval values to integers", () => {
+    // Even with malicious input, parseInt will extract just the numeric portion
+    // "1; DROP TABLE users" becomes 1
+    const result = Fn.dateAdd("date", "1; DROP TABLE users" as any, "year").toSQL(flavor);
+    expect(result).toEqual("DATE_ADD(`date`, INTERVAL 1 YEAR)");
+    expect(result).not.toContain("DROP TABLE");
+  });
+
+  it("should reject non-numeric DATEADD interval values", () => {
+    expect(() => {
+      Fn.dateAdd("date", "abc" as any, "year").toSQL(flavor);
+    }).toThrow("Invalid DATEADD interval");
+  });
+
+  it("should accept valid DATEADD interval types", () => {
+    expect(Fn.dateAdd("date", 1, "year").toSQL(flavor)).toContain("YEAR");
+    expect(Fn.dateAdd("date", 1, "month").toSQL(flavor)).toContain("MONTH");
+    expect(Fn.dateAdd("date", 1, "day").toSQL(flavor)).toContain("DAY");
+  });
+
+  it("should validate DATEADD in SQLite flavor", () => {
+    const sqliteFlavor = Q.flavors.sqlite;
+    const maliciousIntervalType = "year'); DROP TABLE users; --";
+    expect(() => {
+      Fn.dateAdd("date", 1, maliciousIntervalType as any).toSQL(sqliteFlavor);
+    }).toThrow("Invalid DATEADD interval type");
+  });
+
+  it("should validate DATEADD in AWS Timestream flavor", () => {
+    const awsFlavor = Q.flavors.awsTimestream;
+    const maliciousIntervalType = "year'); DROP TABLE users; --";
+    expect(() => {
+      Fn.dateAdd("date", 1, maliciousIntervalType as any).toSQL(awsFlavor);
+    }).toThrow("Invalid DATEADD interval type");
+  });
+});
