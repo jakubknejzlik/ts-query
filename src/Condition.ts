@@ -452,3 +452,19 @@ export const Conditions = {
   not: (condition: Condition) => new NotCondition(condition),
 };
 export { Conditions as Cond };
+
+// Export condition subclasses for use by query targets
+export {
+  BinaryCondition,
+  LogicalCondition,
+  BetweenCondition,
+  InCondition,
+  NotInCondition,
+  NullCondition,
+  LikeCondition,
+  ColumnComparisonCondition,
+  NotCondition,
+};
+
+// Export operator type for targets
+export type { Operator };
