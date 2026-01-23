@@ -39,7 +39,7 @@ npm run build-storybook  # Build static Storybook site
 
 4. **Mutations** - Located in `src/Mutation.ts`. Includes `InsertMutation`, `UpdateMutation`, and `DeleteMutation` classes for DML operations.
 
-5. **SQL Flavors** - Located in `src/flavors/`. Each flavor (MySQL, SQLite, AWS Timestream) extends the base flavor and customizes SQL generation, escaping rules, and type conversions.
+5. **SQL Flavors** - Located in `src/flavors/`. Each flavor (MySQL, SQLite, PostgreSQL, AWS Timestream) extends the base flavor and customizes SQL generation, escaping rules, and type conversions.
 
 ### Key Interfaces
 
