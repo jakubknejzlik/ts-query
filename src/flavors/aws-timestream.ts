@@ -1,9 +1,23 @@
-import { ExpressionBase, FunctionExpression } from "../Expression";
+import dayjs from "dayjs";
+import {
+  ExpressionBase,
+  ExpressionValue,
+  FunctionExpression,
+} from "../Expression";
 import { DefaultFlavor } from "./default";
 
 export class AWSTimestreamFlavor extends DefaultFlavor {
   protected columnQuotes = `"`;
   protected stringQuotes = `'`;
+  escapeValue(value: ExpressionValue): string {
+    if (value instanceof Date) {
+      const formatted = dayjs(value)
+        .tz(this.options?.timezone)
+        .format("YYYY-MM-DD HH:mm:ss");
+      return `TIMESTAMP '${formatted}'`;
+    }
+    return super.escapeValue(value);
+  }
   escapeLimitAndOffset(limit?: number, offset?: number): string {
     let str = "";
     if (offset !== undefined) {

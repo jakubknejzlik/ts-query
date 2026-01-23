@@ -1,8 +1,10 @@
 import { Cond } from "../Condition";
 import { Fn } from "../Function";
 import { Q } from "../Query";
+import { AWSTimestreamFlavor } from "./aws-timestream";
 
 const flavor = Q.flavors.awsTimestream;
+const flavorUTC = new AWSTimestreamFlavor({ timezone: "UTC" });
 
 describe("Query builder AWS Timestream flavor", () => {
   it("should render correct SQL", () => {
@@ -26,6 +28,20 @@ describe("Query builder AWS Timestream flavor", () => {
     );
     expect(Fn.dateAdd("date", -12, "day").toSQL(flavor)).toEqual(
       `date_add('day', -12, "date")`
+    );
+  });
+
+  it("should format Date with TIMESTAMP prefix", () => {
+    const date = new Date("2025-12-12T00:00:00.000Z");
+    expect(Cond.equal("createdAt", date).toSQL(flavorUTC)).toEqual(
+      `"createdAt" = TIMESTAMP '2025-12-12 00:00:00'`
+    );
+  });
+
+  it("should format Date in conditions", () => {
+    const threeMonthsAgo = new Date("2025-09-01T10:30:00.000Z");
+    expect(Cond.greaterThanOrEqual("createdAt", threeMonthsAgo).toSQL(flavorUTC)).toEqual(
+      `"createdAt" >= TIMESTAMP '2025-09-01 10:30:00'`
     );
   });
 });
