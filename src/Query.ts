@@ -14,6 +14,7 @@ import {
 import { ISQLFlavor } from "./Flavor";
 import { AWSTimestreamFlavor } from "./flavors/aws-timestream";
 import { MySQLFlavor } from "./flavors/mysql";
+import { PostgresFlavor } from "./flavors/postgres";
 import { SQLiteFlavor } from "./flavors/sqlite";
 import { Fn } from "./Function";
 import {
@@ -33,6 +34,7 @@ const flavors = {
   mysql: new MySQLFlavor(),
   awsTimestream: new AWSTimestreamFlavor(),
   sqlite: new SQLiteFlavor(),
+  postgres: new PostgresFlavor(),
 };
 
 export type TableSource = string | SelectQuery;
