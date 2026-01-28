@@ -51,6 +51,19 @@ Q.select()
 `}
 />
 
+### NULL Values
+
+Use `Q.null()` to add NULL as a field value. This is preferred over `Q.raw("NULL")` for clarity:
+
+<QueryPreview
+  code={`
+Q.select()
+  .from('users')
+  .addField('name')
+  .addField(Q.null(), 'placeholder');
+`}
+/>
+
 ### Table Aliasing:
 
 Sometimes, for the sake of clarity or to avoid column name conflicts, you might want to alias a table:
@@ -220,7 +233,9 @@ Q.select()
 
 ### Join with subquery
 
-You can also join with a subquery as a table source. This is useful for aggregating or filtering data before joining:
+You can also join with a subquery as a table source. This is useful for aggregating or filtering data before joining.
+
+**Important:** You must wrap the subquery with `Q.table()` when using it in a join. Passing a subquery directly to `leftJoin()` or other join methods will result in an error.
 
 <QueryPreview
   code={`
@@ -229,8 +244,9 @@ Q.select()
   .leftJoin(
     Q.table(Q.select()
       .from('orders')
-      .addField(Fn.sum('price','totalPrice'))
-      .limit(10)
+      .addField('user_id')
+      .addField(Fn.sum('price'), 'totalPrice')
+      .groupBy('user_id')
     , 'o'),
     Cond.columnEqual('u.id', 'o.user_id')
   );

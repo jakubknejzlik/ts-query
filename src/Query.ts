@@ -592,7 +592,7 @@ const inputValueToExpressionValue = (val: InputValue): ExpressionValue => {
 };
 
 export const Query = {
-  table: (name: string, alias?: string) => new Table(name, alias),
+  table: (source: TableSource, alias?: string) => new Table(source, alias),
   select: () => {
     return new SelectQuery();
   },
