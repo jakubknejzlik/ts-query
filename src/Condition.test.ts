@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { Cond } from "./Condition";
+import { Fn } from "./Function";
 import { Q } from "./Query";
 
 const flavor = Q.flavors.mysql;
@@ -81,6 +82,101 @@ describe("Condition", () => {
     );
     expect(Cond.in("foo", [])).toBeNull();
     expect(Cond.in("foo", null)).toBeNull();
+  });
+
+  // NOT IN
+  it("should format notIn", () => {
+    expect(Cond.notIn("foo", [1, 2, 3]).toSQL(flavor)).toEqual(
+      "`foo` NOT IN (1, 2, 3)"
+    );
+    // BUG: strings in notIn are treated as column names instead of string literals
+    // Expected: '`foo` NOT IN ("1", "2", "3")'
+    // Actual: '`foo` NOT IN (`1`, `2`, `3`)' - treats as columns!
+    expect(Cond.notIn("foo", ["1", "2", "3"]).toSQL(flavor)).toEqual(
+      '`foo` NOT IN ("1", "2", "3")'
+    );
+  });
+
+  // IN and NOT IN API consistency
+  it("should treat string values consistently in both in() and notIn()", () => {
+    // Real-world example from the report
+    const inResult = Cond.in("type", ["IncomingInvoice", "ExpenditureCashSlip"])?.toSQL(flavor);
+    const notInResult = Cond.notIn("type", ["IncomingInvoice", "ExpenditureCashSlip"]).toSQL(flavor);
+
+    // Both should quote strings as values, not treat them as column names
+    expect(inResult).toEqual('`type` IN ("IncomingInvoice", "ExpenditureCashSlip")');
+    expect(notInResult).toEqual('`type` NOT IN ("IncomingInvoice", "ExpenditureCashSlip")');
+  });
+
+  // IN/NOT IN edge cases
+  it("should handle single-element arrays", () => {
+    expect(Cond.in("foo", ["only_one"])?.toSQL(flavor)).toEqual(
+      '`foo` IN ("only_one")'
+    );
+    expect(Cond.notIn("foo", [42]).toSQL(flavor)).toEqual("`foo` NOT IN (42)");
+  });
+
+  it("should handle boolean values in arrays", () => {
+    expect(Cond.in("active", [true, false])?.toSQL(flavor)).toEqual(
+      "`active` IN (true, false)"
+    );
+    expect(Cond.notIn("active", [true]).toSQL(flavor)).toEqual(
+      "`active` NOT IN (true)"
+    );
+  });
+
+  it("should handle Date objects in arrays", () => {
+    const date1 = new Date("2024-01-15T10:30:00Z");
+    const date2 = new Date("2024-06-20T14:00:00Z");
+    const inResult = Cond.in("created_at", [date1, date2])?.toSQL(flavor);
+    expect(inResult).toContain("`created_at` IN (");
+    expect(inResult).toContain("2024-01-15");
+    expect(inResult).toContain("2024-06-20");
+  });
+
+  it("should handle dayjs objects in arrays", () => {
+    const day1 = dayjs("2024-01-01");
+    const day2 = dayjs("2024-12-31");
+    const inResult = Cond.in("date", [day1, day2])?.toSQL(flavor);
+    expect(inResult).toContain("`date` IN (");
+    expect(inResult).toContain("2024-01-01");
+    expect(inResult).toContain("2024-12-31");
+  });
+
+  it("should handle Q.raw() expressions in arrays", () => {
+    expect(Cond.in("col", [Q.raw("NOW()"), Q.raw("CURDATE()")])?.toSQL(flavor)).toEqual(
+      "`col` IN (NOW(), CURDATE())"
+    );
+    expect(Cond.notIn("col", [Q.raw("NULL")])?.toSQL(flavor)).toEqual(
+      "`col` NOT IN (NULL)"
+    );
+  });
+
+  it("should not allow FunctionExpression in arrays (use Q.raw instead)", () => {
+    // FunctionExpression cannot be used as a value - this is by design
+    expect(() => Cond.in("col", [Fn.max("price")])).toThrow(
+      "FunctionExpression cannot be used as a value"
+    );
+    // Use Q.raw() for function calls in IN/NOT IN
+    expect(Cond.in("col", [Q.raw("MAX(price)")])?.toSQL(flavor)).toEqual(
+      "`col` IN (MAX(price))"
+    );
+  });
+
+  it("should handle explicit column references with Q.raw()", () => {
+    // When user explicitly wants column references, they can use Q.raw()
+    expect(Cond.in("col", [Q.raw("other_col"), Q.raw("another")])?.toSQL(flavor)).toEqual(
+      "`col` IN (other_col, another)"
+    );
+  });
+
+  it("should handle double negation with not(notIn())", () => {
+    expect(Cond.not(Cond.notIn("foo", [1, 2, 3])).toSQL(flavor)).toEqual(
+      "NOT (`foo` NOT IN (1, 2, 3))"
+    );
+    expect(Cond.not(Cond.notIn("type", ["a", "b"])).toSQL(flavor)).toEqual(
+      'NOT (`type` NOT IN ("a", "b"))'
+    );
   });
 
   // AND
@@ -299,5 +395,24 @@ describe("SQL Injection Prevention", () => {
     // The injection attempt should be contained within the quoted string
     expect(sql).toContain('LIKE "test');
     expect(sql).toContain('DROP TABLE users; --%"');
+  });
+
+  it("should escape quotes in IN values", () => {
+    const sql = Cond.in("col", ["it's", 'say "hello"'])?.toSQL(flavor);
+    // Single quotes should pass through, double quotes should be escaped
+    expect(sql).toContain("it's");
+    expect(sql).toContain('say ""hello""');
+  });
+
+  it("should escape SQL injection attempts in IN values", () => {
+    const sql = Cond.in("col", ["'; DROP TABLE x; --"])?.toSQL(flavor);
+    // The malicious string should be properly quoted as a value
+    expect(sql).toEqual('`col` IN ("\'; DROP TABLE x; --")');
+  });
+
+  it("should escape SQL injection attempts in NOT IN values", () => {
+    const sql = Cond.notIn("col", ['"; DELETE FROM y; --']).toSQL(flavor);
+    // Double quotes should be escaped
+    expect(sql).toContain('""; DELETE FROM y; --"');
   });
 });

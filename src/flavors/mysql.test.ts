@@ -348,9 +348,9 @@ describe("MySQLFlavor", () => {
     });
 
     it("should handle NOT IN with array values", () => {
-      // Note: NotInCondition treats values as column references (uses Q.expr)
+      // NotInCondition treats values as string literals, consistent with InCondition
       const result = Cond.notIn("status", ["deleted", "banned"]).toSQL(flavor);
-      expect(result).toEqual("`status` NOT IN (`deleted`, `banned`)");
+      expect(result).toEqual('`status` NOT IN ("deleted", "banned")');
     });
 
     it("should handle BETWEEN with numeric values", () => {

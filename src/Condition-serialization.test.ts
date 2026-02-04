@@ -86,6 +86,44 @@ describe("Condition Serialization and Deserialization", () => {
     expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
   });
 
+  it("should serialize and deserialize in condition with strings", () => {
+    const condition = Conditions.in("type", ["IncomingInvoice", "ExpenditureCashSlip"]);
+    const serialized = condition!.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition!.toSQL(flavor));
+    expect(deserialized.toSQL(flavor)).toEqual(
+      '`type` IN ("IncomingInvoice", "ExpenditureCashSlip")'
+    );
+  });
+
+  // NOT IN
+  it("should serialize and deserialize notIn condition", () => {
+    const condition = Conditions.notIn("foo", [1, 2, 3]);
+    const serialized = condition.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
+  it("should serialize and deserialize notIn condition with strings", () => {
+    const condition = Conditions.notIn("type", ["IncomingInvoice", "ExpenditureCashSlip"]);
+    const serialized = condition.toJSON();
+    const deserialized = Condition.fromJSON(serialized);
+    expect(deserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+    // Verify the fix: strings should be quoted as values, not treated as columns
+    expect(deserialized.toSQL(flavor)).toEqual(
+      '`type` NOT IN ("IncomingInvoice", "ExpenditureCashSlip")'
+    );
+  });
+
+  it("should handle round-trip serialization of notIn condition", () => {
+    const condition = Conditions.notIn("status", ["deleted", "banned"]);
+    const firstSerialized = condition.toJSON();
+    const firstDeserialized = Condition.fromJSON(firstSerialized);
+    const secondSerialized = firstDeserialized.toJSON();
+    const secondDeserialized = Condition.fromJSON(secondSerialized);
+    expect(secondDeserialized.toSQL(flavor)).toEqual(condition.toSQL(flavor));
+  });
+
   // AND
   it("should serialize and deserialize and condition", () => {
     const condition1 = Conditions.equal("foo", 123);

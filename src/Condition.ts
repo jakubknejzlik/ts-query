@@ -201,7 +201,7 @@ class NotInCondition extends Condition {
   constructor(key: ConditionValue, values: ConditionValue[]) {
     super();
     this.key = Q.expr(key);
-    this.values = values.map((v) => Q.expr(v));
+    this.values = values.map((v) => Q.exprValue(v));
   }
 
   toSQL(flavor: ISQLFlavor): string {
