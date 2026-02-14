@@ -8,12 +8,41 @@ export { MySQLFlavor } from "./flavors/mysql";
 export { PostgresFlavor } from "./flavors/postgres";
 export { SQLiteFlavor } from "./flavors/sqlite";
 
-export { Cond, Condition } from "./Condition";
+// Condition exports
+export {
+  Cond,
+  Condition,
+  BinaryCondition,
+  LogicalCondition,
+  BetweenCondition,
+  InCondition,
+  NotInCondition,
+  NullCondition,
+  LikeCondition,
+  ColumnComparisonCondition,
+  NotCondition,
+} from "./Condition";
+export type { Operator } from "./Condition";
+
 export { Fn, Function } from "./Function";
-export { Q, Query, SelectQuery } from "./Query";
+
+// Query exports
+export {
+  Q,
+  Query,
+  SelectQuery,
+  Table,
+  Join,
+  UnionType,
+} from "./Query";
+export type { JoinType, SelectField, OrderClause, TableSource } from "./Query";
+
+// Interface exports
 export {
   MetadataOperationType,
+  type ICompilable,
   type IMetadata,
+  type IQueryTarget,
   type ISequelizable,
   type ISerializable,
 } from "./interfaces";
@@ -21,3 +50,21 @@ export {
 export { type ISQLFlavor } from "./Flavor";
 
 export type { ExpressionRawValue, ExpressionValue } from "./Expression";
+
+// Target exports
+export {
+  SQLTarget,
+  DynamoDBPartiQLTarget,
+  DynamoDBNativeTarget,
+} from "./targets";
+
+export type {
+  DynamoDBNativeTargetOptions,
+  AttributeValue,
+  DynamoDBQueryInput,
+  DynamoDBScanInput,
+  DynamoDBPutItemInput,
+  DynamoDBUpdateItemInput,
+  DynamoDBDeleteItemInput,
+  DynamoDBBatchWriteItemInput,
+} from "./targets";
