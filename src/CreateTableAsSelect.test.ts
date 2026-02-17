@@ -63,4 +63,27 @@ describe("CreateTableAsSelect", () => {
     expect(cvas.getTableName()).toEqual(tableName);
     expect(cvas.getSelect().toSQL()).toEqual(initialSelectQuery.toSQL());
   });
+
+  describe("OR REPLACE", () => {
+    it("should generate CREATE OR REPLACE TABLE SQL", () => {
+      const ctas = Q.createOrReplaceTableAs(tableName, initialSelectQuery);
+      const expectedSQL = `CREATE OR REPLACE TABLE \`${tableName}\` AS SELECT * FROM \`users\` AS \`u\` WHERE \`u\`.\`id\` = 1`;
+      expect(ctas.toSQL(new MySQLFlavor())).toBe(expectedSQL);
+    });
+
+    it("should clone and preserve orReplace flag", () => {
+      const ctas = Q.createOrReplaceTableAs(tableName, initialSelectQuery);
+      const clone = ctas.clone();
+      expect(clone.toSQL(new MySQLFlavor())).toBe(ctas.toSQL(new MySQLFlavor()));
+    });
+
+    it("should serialize and deserialize correctly", () => {
+      const ctas = Q.createOrReplaceTableAs(tableName, initialSelectQuery);
+      const serialized = ctas.serialize();
+      const deserialized = Q.deserialize(serialized);
+      expect(deserialized.toSQL(new MySQLFlavor())).toBe(
+        ctas.toSQL(new MySQLFlavor())
+      );
+    });
+  });
 });

@@ -72,4 +72,7 @@ export class CreateViewAsSelect
   getSelect(): SelectQuery {
     return this._select;
   }
+  getOrReplace(): boolean {
+    return this._orReplace;
+  }
 }

@@ -469,6 +469,42 @@ Q.select()
 `}
 />
 
+## Create Table As Select (CTAS)
+
+Create a new table from a SELECT query:
+
+<QueryPreview
+  code={`
+Q.createTableAs('new_table', Q.select().from('users').where(Cond.equal('active', true)));
+`}
+/>
+
+### CREATE OR REPLACE TABLE
+
+Use `createOrReplaceTableAs` to replace the table if it already exists:
+
+<QueryPreview
+  code={`
+Q.createOrReplaceTableAs('new_table', Q.select().from('users'));
+`}
+/>
+
+## Create View As Select
+
+<QueryPreview
+  code={`
+Q.createViewAs('active_users', Q.select().from('users').where(Cond.equal('active', true)));
+`}
+/>
+
+### CREATE OR REPLACE VIEW
+
+<QueryPreview
+  code={`
+Q.createOrReplaceViewAs('active_users', Q.select().from('users').where(Cond.equal('active', true)));
+`}
+/>
+
 ## Immutability
 
 One of the key features of the Query Builder is its immutability. This ensures that once a query is constructed, it cannot be changed, preventing unintended side-effects:

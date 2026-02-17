@@ -14,10 +14,18 @@ import {
 export class CreateTableAsSelect
   implements ISerializable, ISequelizable, IMetadata
 {
-  constructor(private _tableName: string, private _select: SelectQuery) {}
+  constructor(
+    private _tableName: string,
+    private _select: SelectQuery,
+    private _orReplace: boolean = false
+  ) {}
 
   public clone(): this {
-    return new (this.constructor as any)(this._tableName, this._select.clone());
+    return new (this.constructor as any)(
+      this._tableName,
+      this._select.clone(),
+      this._orReplace
+    );
   }
 
   getOperationType(): MetadataOperationType {
@@ -29,7 +37,8 @@ export class CreateTableAsSelect
   }
 
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
-    return `CREATE TABLE ${flavor.escapeTable(
+    const orReplaceStr = this._orReplace ? "OR REPLACE " : "";
+    return `CREATE ${orReplaceStr}TABLE ${flavor.escapeTable(
       this._tableName
     )} AS ${this._select.toSQL(flavor)}`;
   }
@@ -45,11 +54,16 @@ export class CreateTableAsSelect
       type: OperationType.CREATE_TABLE_AS,
       select: this._select.toJSON(),
       tableName: this._tableName,
+      orReplace: this._orReplace,
     };
   }
 
-  static fromJSON({ tableName, select }: any): CreateTableAsSelect {
-    return new CreateTableAsSelect(tableName, SelectQuery.fromJSON(select));
+  static fromJSON({ tableName, select, orReplace }: any): CreateTableAsSelect {
+    return new CreateTableAsSelect(
+      tableName,
+      SelectQuery.fromJSON(select),
+      orReplace
+    );
   }
 
   getTableName(): string {
@@ -57,5 +71,8 @@ export class CreateTableAsSelect
   }
   getSelect(): SelectQuery {
     return this._select;
+  }
+  getOrReplace(): boolean {
+    return this._orReplace;
   }
 }

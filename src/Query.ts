@@ -602,6 +602,8 @@ export const Query = {
   insert: (into: string) => new InsertMutation(into),
   createTableAs: (table: string, select: SelectQuery) =>
     new CreateTableAsSelect(table, select),
+  createOrReplaceTableAs: (table: string, select: SelectQuery) =>
+    new CreateTableAsSelect(table, select, true),
   createViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select),
   createOrReplaceViewAs: (table: string, select: SelectQuery) =>
