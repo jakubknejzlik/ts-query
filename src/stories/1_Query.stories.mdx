@@ -469,6 +469,31 @@ Q.select()
 `}
 />
 
+## Values
+
+Use `Q.values()` to create a SELECT query from static data. It generates `SELECT ... UNION ALL SELECT ...` which works across all SQL engines.
+
+<QueryPreview
+  code={`
+Q.values([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+]);
+`}
+/>
+
+### Values as subquery source
+
+<QueryPreview
+  code={`
+Q.select()
+  .from(Q.values([
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+  ]), 'data');
+`}
+/>
+
 ## Create Table As Select (CTAS)
 
 Create a new table from a SELECT query:
@@ -486,6 +511,19 @@ Use `createOrReplaceTableAs` to replace the table if it already exists:
 <QueryPreview
   code={`
 Q.createOrReplaceTableAs('new_table', Q.select().from('users'));
+`}
+/>
+
+### CTAS with Values
+
+Combine `createTableAs` with `Q.values()` to create a table from static data:
+
+<QueryPreview
+  code={`
+Q.createTableAs('seed_data', Q.values([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+]));
 `}
 />
 

@@ -591,6 +591,40 @@ const inputValueToExpressionValue = (val: InputValue): ExpressionValue => {
   return val;
 };
 
+const values = (data: Record<string, any>[]): SelectQuery => {
+  if (data.length === 0)
+    throw new Error("values requires at least one row");
+  const columns = Object.keys(data[0]);
+
+  // First row: SELECT val AS col1, val AS col2, ...
+  let result = new SelectQuery();
+  for (const col of columns) {
+    const val = data[0][col];
+    result = result.addField(
+      val === null || val === undefined
+        ? new RawExpression("NULL")
+        : ExpressionBase.deserializeValue(val),
+      col
+    );
+  }
+
+  // Remaining rows: UNION ALL SELECT val, val, ...
+  for (let i = 1; i < data.length; i++) {
+    let rowQuery = new SelectQuery();
+    for (const col of columns) {
+      const val = data[i][col];
+      rowQuery = rowQuery.addField(
+        val === null || val === undefined
+          ? new RawExpression("NULL")
+          : ExpressionBase.deserializeValue(val)
+      );
+    }
+    result = result.union(rowQuery, UnionType.UNION_ALL);
+  }
+
+  return result;
+};
+
 export const Query = {
   table: (source: TableSource, alias?: string) => new Table(source, alias),
   select: () => {
@@ -608,6 +642,7 @@ export const Query = {
     new CreateViewAsSelect(table, select),
   createOrReplaceViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select, true),
+  values,
   deserialize,
   deserializeRaw,
   flavors,
