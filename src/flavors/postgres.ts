@@ -53,4 +53,18 @@ export class PostgresFlavor extends DefaultFlavor {
 
     return super.escapeFunction(fn);
   }
+
+  escapeLikeCondition(
+    column: string,
+    pattern: string,
+    isLike: boolean,
+    caseInsensitive: boolean
+  ): string {
+    const notPrefix = isLike ? "" : "NOT ";
+    if (caseInsensitive) {
+      // PostgreSQL: use native ILIKE
+      return `${column} ${notPrefix}ILIKE ${pattern}`;
+    }
+    return `${column} ${notPrefix}LIKE ${pattern}`;
+  }
 }

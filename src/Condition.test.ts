@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { Cond } from "./Condition";
+import { Cond, Condition } from "./Condition";
 import { Fn } from "./Function";
 import { Q } from "./Query";
 
@@ -368,6 +368,132 @@ describe("Conditions.fromString", () => {
     expect(sql).toContain('`column` NOT LIKE "%_test%"');
     expect(sql).toContain('`column` NOT LIKE "%.test%"');
     expect(sql).toMatch(/AND/);
+  });
+});
+
+describe("Case-insensitive LIKE conditions", () => {
+  const mysqlFlavor = Q.flavors.mysql;
+  const postgresFlavor = Q.flavors.postgres;
+
+  it("should generate ILIKE for PostgreSQL", () => {
+    expect(
+      Cond.like("name", "%john%", { caseInsensitive: true }).toSQL(
+        postgresFlavor
+      )
+    ).toBe('"name" ILIKE \'%john%\'');
+  });
+
+  it("should generate LOWER() wrapper for MySQL", () => {
+    expect(
+      Cond.like("name", "%john%", { caseInsensitive: true }).toSQL(mysqlFlavor)
+    ).toBe('LOWER(`name`) LIKE LOWER("%john%")');
+  });
+
+  it("should generate NOT ILIKE for PostgreSQL", () => {
+    expect(
+      Cond.notLike("name", "%john%", { caseInsensitive: true }).toSQL(
+        postgresFlavor
+      )
+    ).toBe('"name" NOT ILIKE \'%john%\'');
+  });
+
+  it("should generate NOT LIKE with LOWER() for MySQL", () => {
+    expect(
+      Cond.notLike("name", "%john%", { caseInsensitive: true }).toSQL(
+        mysqlFlavor
+      )
+    ).toBe('LOWER(`name`) NOT LIKE LOWER("%john%")');
+  });
+
+  it("should work with ilike() shorthand for PostgreSQL", () => {
+    expect(Cond.ilike("name", "%john%").toSQL(postgresFlavor)).toBe(
+      '"name" ILIKE \'%john%\''
+    );
+  });
+
+  it("should work with ilike() shorthand for MySQL", () => {
+    expect(Cond.ilike("name", "%john%").toSQL(mysqlFlavor)).toBe(
+      'LOWER(`name`) LIKE LOWER("%john%")'
+    );
+  });
+
+  it("should work with notIlike() shorthand for PostgreSQL", () => {
+    expect(Cond.notIlike("name", "%john%").toSQL(postgresFlavor)).toBe(
+      '"name" NOT ILIKE \'%john%\''
+    );
+  });
+
+  it("should work with notIlike() shorthand for MySQL", () => {
+    expect(Cond.notIlike("name", "%john%").toSQL(mysqlFlavor)).toBe(
+      'LOWER(`name`) NOT LIKE LOWER("%john%")'
+    );
+  });
+
+  it("should generate case-sensitive LIKE when caseInsensitive is false", () => {
+    expect(
+      Cond.like("name", "%john%", { caseInsensitive: false }).toSQL(
+        postgresFlavor
+      )
+    ).toBe('"name" LIKE \'%john%\'');
+    expect(
+      Cond.like("name", "%john%", { caseInsensitive: false }).toSQL(mysqlFlavor)
+    ).toBe('`name` LIKE "%john%"');
+  });
+
+  it("should generate case-sensitive LIKE by default", () => {
+    expect(Cond.like("name", "%john%").toSQL(postgresFlavor)).toBe(
+      '"name" LIKE \'%john%\''
+    );
+    expect(Cond.like("name", "%john%").toSQL(mysqlFlavor)).toBe(
+      '`name` LIKE "%john%"'
+    );
+  });
+
+  it("should serialize and deserialize caseInsensitive flag", () => {
+    const original = Cond.like("name", "%test%", { caseInsensitive: true });
+    const serialized = original.serialize();
+    const deserialized = Condition.deserialize(serialized);
+    expect(deserialized!.toSQL(postgresFlavor)).toBe(
+      original.toSQL(postgresFlavor)
+    );
+    expect(deserialized!.toSQL(mysqlFlavor)).toBe(original.toSQL(mysqlFlavor));
+  });
+
+  it("should serialize and deserialize ilike shorthand", () => {
+    const original = Cond.ilike("name", "%test%");
+    const serialized = original.serialize();
+    const deserialized = Condition.deserialize(serialized);
+    expect(deserialized!.toSQL(postgresFlavor)).toBe(
+      original.toSQL(postgresFlavor)
+    );
+  });
+
+  it("should serialize and deserialize notIlike shorthand", () => {
+    const original = Cond.notIlike("name", "%test%");
+    const serialized = original.serialize();
+    const deserialized = Condition.deserialize(serialized);
+    expect(deserialized!.toSQL(postgresFlavor)).toBe(
+      original.toSQL(postgresFlavor)
+    );
+  });
+
+  it("should handle caseInsensitive: false when deserializing old data without the flag", () => {
+    // Simulate old serialized data without caseInsensitive field
+    // First, get properly formatted key from a real condition
+    const realCondition = Cond.like("name", "%test%");
+    const realJson = realCondition.toJSON();
+    // Create a copy without caseInsensitive to simulate old data
+    const oldJson = {
+      type: realJson.type,
+      key: realJson.key,
+      pattern: realJson.pattern,
+      isLike: realJson.isLike,
+      // no caseInsensitive field
+    };
+    const deserialized = Condition.fromJSON(oldJson);
+    // Should default to case-sensitive (caseInsensitive: false)
+    expect(deserialized.toSQL(postgresFlavor)).toBe('"name" LIKE \'%test%\'');
+    expect(deserialized.toSQL(mysqlFlavor)).toBe('`name` LIKE "%test%"');
   });
 });
 

@@ -151,4 +151,17 @@ export class DefaultFlavor implements ISQLFlavor {
   escapeUnion(unionType: UnionType, leftSQL: string, rightSQL: string): string {
     return `(${leftSQL}) ${unionType} (${rightSQL})`;
   }
+  escapeLikeCondition(
+    column: string,
+    pattern: string,
+    isLike: boolean,
+    caseInsensitive: boolean
+  ): string {
+    const notPrefix = isLike ? "" : "NOT ";
+    if (caseInsensitive) {
+      // MySQL/SQLite: use LOWER() wrapper
+      return `LOWER(${column}) ${notPrefix}LIKE LOWER(${pattern})`;
+    }
+    return `${column} ${notPrefix}LIKE ${pattern}`;
+  }
 }

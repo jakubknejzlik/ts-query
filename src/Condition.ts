@@ -259,18 +259,30 @@ class LikeCondition extends Condition {
   key: ExpressionBase;
   pattern: string;
   isLike: boolean;
+  caseInsensitive: boolean;
 
-  constructor(key: ConditionValue, pattern: string, isLike: boolean) {
+  constructor(
+    key: ConditionValue,
+    pattern: string,
+    isLike: boolean,
+    caseInsensitive: boolean = false
+  ) {
     super();
     this.key = Q.expr(key);
     this.pattern = pattern;
     this.isLike = isLike;
+    this.caseInsensitive = caseInsensitive;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    // Use flavor.escapeValue to properly escape the pattern and prevent SQL injection
+    const escapedColumn = this.key.toSQL(flavor);
     const escapedPattern = flavor.escapeValue(this.pattern);
-    return `${this.key.toSQL(flavor)} ${this.isLike ? "" : "NOT "}LIKE ${escapedPattern}`;
+    return flavor.escapeLikeCondition(
+      escapedColumn,
+      escapedPattern,
+      this.isLike,
+      this.caseInsensitive
+    );
   }
 
   // serialization
@@ -280,6 +292,7 @@ class LikeCondition extends Condition {
       key: this.key.serialize(),
       pattern: this.pattern,
       isLike: this.isLike,
+      caseInsensitive: this.caseInsensitive,
     };
   }
 
@@ -287,7 +300,8 @@ class LikeCondition extends Condition {
     return new LikeCondition(
       ExpressionBase.deserialize(json.key),
       json.pattern,
-      json.isLike
+      json.isLike,
+      json.caseInsensitive ?? false
     );
   }
 }
@@ -434,9 +448,14 @@ export const Conditions = {
   null: (key: string) => new NullCondition(key, true),
   // Deprecated: use isNotNull instead
   notNull: (key: string) => new NullCondition(key, false),
-  like: (key: string, pattern: string) => new LikeCondition(key, pattern, true),
-  notLike: (key: string, pattern: string) =>
-    new LikeCondition(key, pattern, false),
+  like: (key: string, pattern: string, opts?: { caseInsensitive?: boolean }) =>
+    new LikeCondition(key, pattern, true, opts?.caseInsensitive ?? false),
+  notLike: (key: string, pattern: string, opts?: { caseInsensitive?: boolean }) =>
+    new LikeCondition(key, pattern, false, opts?.caseInsensitive ?? false),
+  ilike: (key: string, pattern: string) =>
+    new LikeCondition(key, pattern, true, true),
+  notIlike: (key: string, pattern: string) =>
+    new LikeCondition(key, pattern, false, true),
   columnEqual: (leftKey: string, rightKey: string) =>
     new ColumnComparisonCondition(leftKey, rightKey, "="),
   columnNotEqual: (leftKey: string, rightKey: string) =>

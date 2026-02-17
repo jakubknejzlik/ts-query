@@ -15,4 +15,10 @@ export interface ISQLFlavor {
   escapeFunction(fn: FunctionExpression): string;
   escapeOperation(fn: OperationExpression): string;
   escapeUnion(unionType: UnionType, leftSQL: string, rightSQL: string): string;
+  escapeLikeCondition(
+    column: string,
+    pattern: string,
+    isLike: boolean,
+    caseInsensitive: boolean
+  ): string;
 }
