@@ -34,6 +34,14 @@ describe("Expression", () => {
       "SUBSTRING(`year`,1,10)"
     );
   });
+  it("should handle unary minus prefix on column names", () => {
+    expect(Fn.sum("-amount_czk").toSQL(flavor)).toEqual("SUM(-`amount_czk`)");
+    expect(Fn.sum("-amount").toSQL(flavor)).toEqual("SUM(-`amount`)");
+    expect(Fn.max("-price").toSQL(flavor)).toEqual("MAX(-`price`)");
+    expect(Fn.sum("-table.column").toSQL(flavor)).toEqual(
+      "SUM(-`table`.`column`)"
+    );
+  });
   it("should support value composition", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
       'SUM(IFNULL(`foo`,"123"))'

@@ -33,6 +33,12 @@ export class DefaultFlavor implements ISQLFlavor {
       return name;
     }
     if (legacyParsing) {
+      // Handle unary minus prefix: -column_name → -`column_name`
+      const unaryMinusMatch = name.match(/^-([a-zA-Z_][a-zA-Z0-9_.]*\*?)$/);
+      if (unaryMinusMatch) {
+        return `-${this.escapeColumn(unaryMinusMatch[1], legacyParsing)}`;
+      }
+
       const columnMatch = name.match(/^[\.a-zA-Z0-9_*]+$/);
       if (columnMatch) {
         return name
