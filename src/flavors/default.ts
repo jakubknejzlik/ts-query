@@ -33,17 +33,15 @@ export class DefaultFlavor implements ISQLFlavor {
       return name;
     }
     if (legacyParsing) {
-      const columnMatch = name.match(/^[\.a-zA-Z0-9_]+$/);
+      const columnMatch = name.match(/^[\.a-zA-Z0-9_*]+$/);
       if (columnMatch) {
-        return `${this.columnQuotes}${name
-          .replace(
+        return name
+          .split(".")
+          .map(part => part === "*" ? "*" : `${this.columnQuotes}${part.replace(
             new RegExp(`/${this.columnQuotes}/`, "g"),
             `${this.columnQuotes}${this.columnQuotes}`
-          )
-          .split(".")
-          .join(`${this.columnQuotes}.${this.columnQuotes}`)}${
-          this.columnQuotes
-        }`;
+          )}${this.columnQuotes}`)
+          .join(".");
       }
       // In legacy mode, allow through values that appear to be:
       // - Already escaped (contains column quotes)
@@ -73,9 +71,10 @@ export class DefaultFlavor implements ISQLFlavor {
         .split(".")
         .join(`${this.columnQuotes}.${this.columnQuotes}`)}${this.columnQuotes}`;
     }
-    return `${this.columnQuotes}${name
+    return name
       .split(".")
-      .join(`${this.columnQuotes}.${this.columnQuotes}`)}${this.columnQuotes}`;
+      .map(part => part === "*" ? "*" : `${this.columnQuotes}${part}${this.columnQuotes}`)
+      .join(".");
   }
 
   escapeTable(table: string): string {

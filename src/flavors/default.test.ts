@@ -256,6 +256,29 @@ describe("DefaultFlavor", () => {
     });
   });
 
+  describe("Wildcard fields", () => {
+    it("should handle table.* wildcard pattern", () => {
+      const sql = Q.select()
+        .addField("fd.*")
+        .from("financialdiaries", "fd")
+        .toSQL(flavor);
+      expect(sql).toEqual("SELECT `fd`.* FROM `financialdiaries` AS `fd`");
+    });
+
+    it("should handle bare * wildcard", () => {
+      const sql = Q.select().from("users").toSQL(flavor);
+      expect(sql).toContain("SELECT *");
+    });
+
+    it("should still properly quote normal dotted columns", () => {
+      const sql = Q.select()
+        .addField("table.column")
+        .from("table")
+        .toSQL(flavor);
+      expect(sql).toContain("`table`.`column`");
+    });
+  });
+
   describe("Edge cases", () => {
     it("should handle NULL values", () => {
       const result = Cond.isNull("column").toSQL(flavor);
