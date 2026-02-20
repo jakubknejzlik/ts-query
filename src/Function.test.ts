@@ -42,6 +42,15 @@ describe("Expression", () => {
       "SUM(-`table`.`column`)"
     );
   });
+  it("should handle empty string values", () => {
+    expect(Q.S``).toBeDefined();
+    const query = Q.select().addField(Q.S``).from("tableName");
+    expect(query.toSQL(flavor)).toEqual('SELECT "" FROM `tableName`');
+
+    // verify serialization round-trip
+    const deserialized = Q.deserialize(query.serialize());
+    expect(deserialized.toSQL(flavor)).toEqual(query.toSQL(flavor));
+  });
   it("should support value composition", () => {
     expect(Fn.sum(Fn.ifnull("foo", Q.S`123`)).toSQL(flavor)).toEqual(
       'SUM(IFNULL(`foo`,"123"))'

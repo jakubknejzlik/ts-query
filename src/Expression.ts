@@ -96,7 +96,7 @@ export class Expression<T = ExpressionValue> extends ExpressionBase {
       return this.value.toSQL(flavor, options);
     }
     let value = `${this.value}`;
-    const stringMatches = value.match(/&([^#]+)&/g);
+    const stringMatches = value.match(/&([^#]*)&/g);
     if (stringMatches) {
       for (const match of stringMatches) {
         value = value.replace(
