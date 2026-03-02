@@ -52,19 +52,4 @@ export { type ISQLFlavor } from "./Flavor";
 export type { ExpressionRawValue, ExpressionValue } from "./Expression";
 
 // Target exports
-export {
-  SQLTarget,
-  DynamoDBPartiQLTarget,
-  DynamoDBNativeTarget,
-} from "./targets";
-
-export type {
-  DynamoDBNativeTargetOptions,
-  AttributeValue,
-  DynamoDBQueryInput,
-  DynamoDBScanInput,
-  DynamoDBPutItemInput,
-  DynamoDBUpdateItemInput,
-  DynamoDBDeleteItemInput,
-  DynamoDBBatchWriteItemInput,
-} from "./targets";
+export { SQLTarget } from "./targets";
