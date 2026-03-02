@@ -37,10 +37,41 @@ const flavors = {
   postgres: new PostgresFlavor(),
 };
 
-export type TableSource = string | SelectQuery;
+export type TableSource =
+  | string
+  | SelectQuery
+  | CreateTableAsSelect
+  | CreateViewAsSelect;
+
+function isTableReference(
+  table: TableSource
+): table is CreateTableAsSelect | CreateViewAsSelect {
+  return (
+    table instanceof CreateTableAsSelect || table instanceof CreateViewAsSelect
+  );
+}
+
+function getTableReferenceName(
+  table: CreateTableAsSelect | CreateViewAsSelect
+): string {
+  return table instanceof CreateTableAsSelect
+    ? table.getTableName()
+    : table.getViewName();
+}
 
 export class Table implements ISequelizable, ISerializable {
-  constructor(public source: TableSource, public alias?: string) {}
+  public source: string | SelectQuery;
+  public alias?: string;
+
+  constructor(source: TableSource, alias?: string) {
+    // Normalize CTAS/CVAS to plain string table names
+    if (isTableReference(source)) {
+      this.source = getTableReferenceName(source);
+    } else {
+      this.source = source;
+    }
+    this.alias = alias;
+  }
   public clone(): this {
     return new (this.constructor as any)(this.source, this.alias);
   }
@@ -52,10 +83,13 @@ export class Table implements ISequelizable, ISerializable {
   }
 
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
-    let table = this.source;
+    let table: string | SelectQuery = this.source;
 
     if (!isSelectQuery(table) && options?.transformTable) {
-      table = options.transformTable(table);
+      const transformed = options.transformTable(table);
+      table = isTableReference(transformed)
+        ? getTableReferenceName(transformed)
+        : transformed;
       options = { ...options, transformTable: undefined };
     }
 
@@ -98,6 +132,7 @@ export const escapeTable = (
   options?: ISequelizableOptions
 ): string => {
   if (isSelectQuery(table)) return `(${table.toSQL(flavor, options)})`;
+  if (isTableReference(table)) return flavor.escapeTable(getTableReferenceName(table));
   return flavor.escapeTable(table);
 };
 
