@@ -105,6 +105,34 @@ describe("Expression serialization", () => {
     expect(expr3.toSQL(flavor)).toEqual(expr.toSQL(flavor));
   });
 
+  it("Q.value(null).toSQL produces NULL", () => {
+    expect(Q.value(null).toSQL(flavor)).toEqual("NULL");
+  });
+
+  it("Q.null().toSQL produces NULL", () => {
+    expect(Q.null().toSQL(flavor)).toEqual("NULL");
+  });
+
+  it("Q.value(null) round-trips through serialize/deserialize to NULL", () => {
+    const expr = Q.value(null);
+    const restored = ExpressionBase.deserialize(expr.serialize());
+    expect(restored.toSQL(flavor)).toEqual("NULL");
+    const restoredViaValue = ExpressionBase.deserializeValue(expr.serialize());
+    expect(restoredViaValue.toSQL(flavor)).toEqual("NULL");
+  });
+
+  it("Q.null() round-trips through serialize/deserialize to NULL", () => {
+    const expr = Q.null();
+    const restored = ExpressionBase.deserialize(expr.serialize());
+    expect(restored.toSQL(flavor)).toEqual("NULL");
+  });
+
+  it("Q.value(null) and Q.null() produce equivalent SQL", () => {
+    expect(Q.value(null).toSQL(flavor)).toEqual(
+      Q.null().toSQL(flavor)
+    );
+  });
+
   it("Date value expression serialization with timezones", () => {
     const timezone = "Europe/Prague";
     const flavorWithTimezone = new MySQLFlavor({ timezone });

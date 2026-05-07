@@ -151,6 +151,7 @@ export class ValueExpression extends Expression<ExpressionValue> {
   }
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     if (
+      this.value === null ||
       typeof this.value === "number" ||
       typeof this.value === "string" ||
       typeof this.value === "bigint" ||

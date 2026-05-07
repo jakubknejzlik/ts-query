@@ -30,7 +30,7 @@ import {
 } from "./interfaces";
 import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 
-export type InputValue = ExpressionValue | Dayjs;
+export type InputValue = ExpressionValue | Dayjs | null;
 
 const flavors = {
   mysql: new MySQLFlavor(),
