@@ -430,7 +430,7 @@ export const Conditions = {
     new BinaryCondition(key, value, "<="),
   between: (key: ConditionValue, values: [ConditionValue, ConditionValue]) =>
     new BetweenCondition(key, Q.exprValue(values[0]), Q.exprValue(values[1])),
-  in: (key: string, values: ConditionValue[] | null) =>
+  in: (key: ConditionValue, values: ConditionValue[] | null) =>
     values && values.length > 0 ? new InCondition(key, values) : null,
   notIn: (key: ConditionValue, values: ConditionValue[]) =>
     new NotInCondition(key, values),
@@ -442,31 +442,37 @@ export const Conditions = {
     const _c = (conditions || []).filter((c) => c !== null);
     return _c.length > 0 ? new LogicalCondition(_c, "OR") : null;
   },
-  isNull: (key: string) => new NullCondition(key, true),
-  isNotNull: (key: string) => new NullCondition(key, false),
+  isNull: (key: ConditionValue) => new NullCondition(key, true),
+  isNotNull: (key: ConditionValue) => new NullCondition(key, false),
   // Deprecated: use isNull instead
-  null: (key: string) => new NullCondition(key, true),
+  null: (key: ConditionValue) => new NullCondition(key, true),
   // Deprecated: use isNotNull instead
-  notNull: (key: string) => new NullCondition(key, false),
-  like: (key: string, pattern: string, opts?: { caseInsensitive?: boolean }) =>
-    new LikeCondition(key, pattern, true, opts?.caseInsensitive ?? false),
-  notLike: (key: string, pattern: string, opts?: { caseInsensitive?: boolean }) =>
-    new LikeCondition(key, pattern, false, opts?.caseInsensitive ?? false),
-  ilike: (key: string, pattern: string) =>
+  notNull: (key: ConditionValue) => new NullCondition(key, false),
+  like: (
+    key: ConditionValue,
+    pattern: string,
+    opts?: { caseInsensitive?: boolean }
+  ) => new LikeCondition(key, pattern, true, opts?.caseInsensitive ?? false),
+  notLike: (
+    key: ConditionValue,
+    pattern: string,
+    opts?: { caseInsensitive?: boolean }
+  ) => new LikeCondition(key, pattern, false, opts?.caseInsensitive ?? false),
+  ilike: (key: ConditionValue, pattern: string) =>
     new LikeCondition(key, pattern, true, true),
-  notIlike: (key: string, pattern: string) =>
+  notIlike: (key: ConditionValue, pattern: string) =>
     new LikeCondition(key, pattern, false, true),
-  columnEqual: (leftKey: string, rightKey: string) =>
+  columnEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "="),
-  columnNotEqual: (leftKey: string, rightKey: string) =>
+  columnNotEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "!="),
-  columnGreaterThan: (leftKey: string, rightKey: string) =>
+  columnGreaterThan: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, ">"),
-  columnLessThan: (leftKey: string, rightKey: string) =>
+  columnLessThan: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "<"),
-  columnGreaterThanOrEqual: (leftKey: string, rightKey: string) =>
+  columnGreaterThanOrEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, ">="),
-  columnLessThanOrEqual: (leftKey: string, rightKey: string) =>
+  columnLessThanOrEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "<="),
   not: (condition: Condition) => new NotCondition(condition),
 };

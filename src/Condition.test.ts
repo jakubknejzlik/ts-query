@@ -542,3 +542,58 @@ describe("SQL Injection Prevention", () => {
     expect(sql).toContain('""; DELETE FROM y; --"');
   });
 });
+
+describe("Condition with FunctionExpression key (issue #14)", () => {
+  it("Cond.in accepts FunctionExpression as key", () => {
+    const sql = Cond.in(Fn.substring("fd.account", 1, 1), [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+    ])?.toSQL(flavor);
+    expect(sql).toEqual(
+      'SUBSTRING(`fd`.`account`,1,1) IN ("0", "1", "2", "3", "4")'
+    );
+  });
+
+  it("Cond.notIn accepts FunctionExpression as key", () => {
+    const sql = Cond.notIn(Fn.substring("fd.account", 1, 1), ["x"]).toSQL(
+      flavor
+    );
+    expect(sql).toEqual('SUBSTRING(`fd`.`account`,1,1) NOT IN ("x")');
+  });
+
+  it("Cond.like accepts FunctionExpression as key", () => {
+    const sql = Cond.like(Fn.substring("fd.account", 1, 3), "00%").toSQL(
+      flavor
+    );
+    expect(sql).toEqual('SUBSTRING(`fd`.`account`,1,3) LIKE "00%"');
+  });
+
+  it("Cond.notLike accepts FunctionExpression as key", () => {
+    const sql = Cond.notLike(Fn.substring("fd.account", 1, 3), "00%").toSQL(
+      flavor
+    );
+    expect(sql).toEqual('SUBSTRING(`fd`.`account`,1,3) NOT LIKE "00%"');
+  });
+
+  it("Cond.isNull / isNotNull accept FunctionExpression as key", () => {
+    expect(Cond.isNull(Fn.max("price")).toSQL(flavor)).toEqual(
+      "MAX(`price`) IS NULL"
+    );
+    expect(Cond.isNotNull(Fn.max("price")).toSQL(flavor)).toEqual(
+      "MAX(`price`) IS NOT NULL"
+    );
+  });
+
+  it("Cond.columnEqual accepts FunctionExpression on either side", () => {
+    const sql = Cond.columnEqual(
+      Fn.substring("a.col", 1, 1),
+      Fn.substring("b.col", 1, 1)
+    ).toSQL(flavor);
+    expect(sql).toEqual(
+      "SUBSTRING(`a`.`col`,1,1) = SUBSTRING(`b`.`col`,1,1)"
+    );
+  });
+});
