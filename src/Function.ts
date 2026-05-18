@@ -160,7 +160,7 @@ export const Function = {
           new OperationExpression(
             "/",
             new OperationExpression("-", thisYearColumn, lastYearColumn),
-            lastYearColumn
+            new FunctionExpression("ABS", lastYearColumn)
           )
         )
       )
