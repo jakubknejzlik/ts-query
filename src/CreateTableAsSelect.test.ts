@@ -1,4 +1,5 @@
 import { Cond } from "./Condition";
+import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { Q } from "./Query";
 import { MySQLFlavor } from "./flavors/mysql";
 import { MetadataOperationType } from "./interfaces";
@@ -143,6 +144,56 @@ describe("CreateTableAsSelect", () => {
       expect(deserialized.toSQL(new MySQLFlavor())).toBe(
         ctas.toSQL(new MySQLFlavor())
       );
+    });
+  });
+
+  describe("IF NOT EXISTS", () => {
+    it("should generate CREATE TABLE IF NOT EXISTS SQL", () => {
+      const ctas = Q.createTableIfNotExistsAs(tableName, initialSelectQuery);
+      const expectedSQL = `CREATE TABLE IF NOT EXISTS \`${tableName}\` AS SELECT * FROM \`users\` AS \`u\` WHERE \`u\`.\`id\` = 1`;
+      expect(ctas.toSQL(new MySQLFlavor())).toBe(expectedSQL);
+    });
+
+    it("should clone and preserve ifNotExists flag", () => {
+      const ctas = Q.createTableIfNotExistsAs(tableName, initialSelectQuery);
+      const clone = ctas.clone();
+      expect(clone.getIfNotExists()).toBe(true);
+      expect(clone.toSQL(new MySQLFlavor())).toBe(ctas.toSQL(new MySQLFlavor()));
+    });
+
+    it("should serialize and deserialize correctly", () => {
+      const ctas = Q.createTableIfNotExistsAs(tableName, initialSelectQuery);
+      const serialized = ctas.serialize();
+      const deserialized = Q.deserialize(serialized);
+      expect(deserialized).toEqual(ctas);
+      expect(deserialized.toSQL(new MySQLFlavor())).toBe(
+        ctas.toSQL(new MySQLFlavor())
+      );
+    });
+
+    it("should include ifNotExists field in JSON serialization", () => {
+      const ctas = Q.createTableIfNotExistsAs(tableName, initialSelectQuery);
+      expect(ctas.toJSON().ifNotExists).toBe(true);
+      const plain = Q.createTableAs(tableName, initialSelectQuery);
+      expect(plain.toJSON().ifNotExists).toBe(false);
+    });
+
+    it("should deserialize legacy JSON without ifNotExists field (backwards compatible)", () => {
+      const ctas = Q.createTableAs(tableName, initialSelectQuery);
+      const json = ctas.toJSON() as any;
+      delete json.ifNotExists;
+      const deserialized = Q.deserialize(JSON.stringify(json));
+      expect((deserialized as any).getIfNotExists()).toBe(false);
+      expect(deserialized.toSQL(new MySQLFlavor())).toBe(
+        ctas.toSQL(new MySQLFlavor())
+      );
+    });
+
+    it("should throw when both orReplace and ifNotExists are set", () => {
+      expect(
+        () =>
+          new CreateTableAsSelect(tableName, initialSelectQuery, true, true)
+      ).toThrow(/mutually exclusive/);
     });
   });
 });

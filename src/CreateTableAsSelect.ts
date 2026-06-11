@@ -17,14 +17,22 @@ export class CreateTableAsSelect
   constructor(
     private _tableName: string,
     private _select: SelectQuery,
-    private _orReplace: boolean = false
-  ) {}
+    private _orReplace: boolean = false,
+    private _ifNotExists: boolean = false
+  ) {
+    if (this._orReplace && this._ifNotExists) {
+      throw new Error(
+        "CreateTableAsSelect: orReplace and ifNotExists are mutually exclusive"
+      );
+    }
+  }
 
   public clone(): this {
     return new (this.constructor as any)(
       this._tableName,
       this._select.clone(),
-      this._orReplace
+      this._orReplace,
+      this._ifNotExists
     );
   }
 
@@ -38,7 +46,8 @@ export class CreateTableAsSelect
 
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
     const orReplaceStr = this._orReplace ? "OR REPLACE " : "";
-    return `CREATE ${orReplaceStr}TABLE ${flavor.escapeTable(
+    const ifNotExistsStr = this._ifNotExists ? "IF NOT EXISTS " : "";
+    return `CREATE ${orReplaceStr}TABLE ${ifNotExistsStr}${flavor.escapeTable(
       this._tableName
     )} AS ${this._select.toSQL(flavor)}`;
   }
@@ -55,14 +64,21 @@ export class CreateTableAsSelect
       select: this._select.toJSON(),
       tableName: this._tableName,
       orReplace: this._orReplace,
+      ifNotExists: this._ifNotExists,
     };
   }
 
-  static fromJSON({ tableName, select, orReplace }: any): CreateTableAsSelect {
+  static fromJSON({
+    tableName,
+    select,
+    orReplace,
+    ifNotExists,
+  }: any): CreateTableAsSelect {
     return new CreateTableAsSelect(
       tableName,
       SelectQuery.fromJSON(select),
-      orReplace
+      orReplace,
+      ifNotExists
     );
   }
 
@@ -74,5 +90,8 @@ export class CreateTableAsSelect
   }
   getOrReplace(): boolean {
     return this._orReplace;
+  }
+  getIfNotExists(): boolean {
+    return this._ifNotExists;
   }
 }

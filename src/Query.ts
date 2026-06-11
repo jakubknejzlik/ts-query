@@ -717,6 +717,8 @@ export const Query = {
     new CreateTableAsSelect(table, select),
   createOrReplaceTableAs: (table: string, select: SelectQuery) =>
     new CreateTableAsSelect(table, select, true),
+  createTableIfNotExistsAs: (table: string, select: SelectQuery) =>
+    new CreateTableAsSelect(table, select, false, true),
   createViewAs: (table: string, select: SelectQuery) =>
     new CreateViewAsSelect(table, select),
   createOrReplaceViewAs: (table: string, select: SelectQuery) =>
