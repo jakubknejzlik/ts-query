@@ -1,13 +1,11 @@
-// Query targets for compiling queries to different backends
-export { SQLTarget } from "./SQLTarget";
-
 // DynamoDB targets
+export { DynamoDBPartiQLTarget } from "./DynamoDBPartiQLTarget";
 export {
-  DynamoDBPartiQLTarget,
   DynamoDBNativeTarget,
   type DynamoDBNativeTargetOptions,
-} from "./dynamodb";
+} from "./DynamoDBNativeTarget";
 
+// DynamoDB types
 export type {
   AttributeValue,
   ExpressionAttributeNameMap,
@@ -22,4 +20,4 @@ export type {
   DynamoDBReadInput,
   DynamoDBWriteInput,
   DynamoDBInput,
-} from "./dynamodb";
+} from "./types";
