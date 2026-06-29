@@ -1,10 +1,33 @@
 import { Dayjs } from "dayjs";
 import { ExpressionBase, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
-import { Q } from "./Query";
+import { Q, SelectQuery } from "./Query";
 import { ISequelizable, ISerializable } from "./interfaces";
 
 type ConditionValue = ExpressionValue | Dayjs;
+
+// Values accepted by IN / NOT IN: a list of values, a subquery, or null.
+type InValues = ConditionValue[] | SelectQuery | null;
+
+// Normalizes the value(s) passed to an IN/NOT IN condition.
+// - A SelectQuery (passed directly or as the only element of an array) becomes a subquery.
+// - An empty/null list is rendered fail-closed as `(NULL)` so an empty IN never silently
+//   drops the filter (which would expose all rows). The NULL marker survives serialization.
+const normalizeInValues = (
+  values: InValues
+): { subquery?: SelectQuery; values: ExpressionBase[] } => {
+  if (values instanceof SelectQuery) {
+    return { subquery: values, values: [] };
+  }
+  const arr = values ?? [];
+  if (arr.length === 1 && arr[0] instanceof SelectQuery) {
+    return { subquery: arr[0] as SelectQuery, values: [] };
+  }
+  if (arr.length === 0) {
+    return { values: [Q.exprValue(Q.raw("NULL"))] };
+  }
+  return { values: arr.map((v) => Q.exprValue(v)) };
+};
 
 export class Condition implements ISequelizable, ISerializable {
   toSQL(flavor: ISQLFlavor): string {
@@ -164,17 +187,21 @@ class BetweenCondition extends Condition {
 class InCondition extends Condition {
   key: ExpressionBase;
   values: ExpressionBase[];
+  subquery?: SelectQuery;
 
-  constructor(key: ConditionValue, values: ConditionValue[]) {
+  constructor(key: ConditionValue, values: InValues) {
     super();
     this.key = Q.expr(key);
-    this.values = values.map((v) => Q.exprValue(v));
+    const normalized = normalizeInValues(values);
+    this.values = normalized.values;
+    this.subquery = normalized.subquery;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} IN (${this.values
-      .map((v) => v.toSQL(flavor))
-      .join(", ")})`;
+    const right = this.subquery
+      ? this.subquery.toSQL(flavor)
+      : this.values.map((v) => v.toSQL(flavor)).join(", ");
+    return `${this.key.toSQL(flavor)} IN (${right})`;
   }
 
   // serialization
@@ -182,11 +209,19 @@ class InCondition extends Condition {
     return {
       type: "InCondition",
       key: this.key.serialize(),
-      values: this.values.map((v) => v.serialize()),
+      ...(this.subquery
+        ? { subquery: this.subquery.toJSON() }
+        : { values: this.values.map((v) => v.serialize()) }),
     };
   }
 
   static fromJSON(json: any): InCondition {
+    if (json.subquery) {
+      return new InCondition(
+        ExpressionBase.deserialize(json.key),
+        SelectQuery.fromJSON(json.subquery)
+      );
+    }
     return new InCondition(
       ExpressionBase.deserialize(json.key),
       json.values.map(ExpressionBase.deserializeValue)
@@ -197,17 +232,21 @@ class InCondition extends Condition {
 class NotInCondition extends Condition {
   key: ExpressionBase;
   values: ExpressionBase[];
+  subquery?: SelectQuery;
 
-  constructor(key: ConditionValue, values: ConditionValue[]) {
+  constructor(key: ConditionValue, values: InValues) {
     super();
     this.key = Q.expr(key);
-    this.values = values.map((v) => Q.exprValue(v));
+    const normalized = normalizeInValues(values);
+    this.values = normalized.values;
+    this.subquery = normalized.subquery;
   }
 
   toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} NOT IN (${this.values
-      .map((v) => v.toSQL(flavor))
-      .join(", ")})`;
+    const right = this.subquery
+      ? this.subquery.toSQL(flavor)
+      : this.values.map((v) => v.toSQL(flavor)).join(", ");
+    return `${this.key.toSQL(flavor)} NOT IN (${right})`;
   }
 
   // serialization
@@ -215,11 +254,19 @@ class NotInCondition extends Condition {
     return {
       type: "NotInCondition",
       key: this.key.serialize(),
-      values: this.values.map((v) => v.serialize()),
+      ...(this.subquery
+        ? { subquery: this.subquery.toJSON() }
+        : { values: this.values.map((v) => v.serialize()) }),
     };
   }
 
   static fromJSON(json: any): NotInCondition {
+    if (json.subquery) {
+      return new NotInCondition(
+        ExpressionBase.deserialize(json.key),
+        SelectQuery.fromJSON(json.subquery)
+      );
+    }
     return new NotInCondition(
       ExpressionBase.deserialize(json.key),
       json.values.map(ExpressionBase.deserializeValue)
@@ -430,9 +477,10 @@ export const Conditions = {
     new BinaryCondition(key, value, "<="),
   between: (key: ConditionValue, values: [ConditionValue, ConditionValue]) =>
     new BetweenCondition(key, Q.exprValue(values[0]), Q.exprValue(values[1])),
-  in: (key: ConditionValue, values: ConditionValue[] | null) =>
-    values && values.length > 0 ? new InCondition(key, values) : null,
-  notIn: (key: ConditionValue, values: ConditionValue[]) =>
+  // Fail-closed: an empty/null list renders `IN (NULL)` (never matches) instead of being
+  // dropped, so an empty IN can never silently expand visibility. Accepts a subquery too.
+  in: (key: ConditionValue, values: InValues) => new InCondition(key, values),
+  notIn: (key: ConditionValue, values: InValues) =>
     new NotInCondition(key, values),
   and: (conditions: (Condition | null)[] | null) => {
     const _c = (conditions || []).filter((c) => c !== null);
