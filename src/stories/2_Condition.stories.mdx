@@ -109,6 +109,53 @@ Cond.in('foo', [1, 2, 3]);
 `}
 />
 
+#### IN with a subquery
+
+`Cond.in` also accepts a `SelectQuery` as its value, generating a `IN (SELECT …)`
+subquery. The subquery is fully serializable, so it survives a
+`serialize`/`deserialize` round-trip identically to its direct `toSQL` output:
+
+<QueryPreview
+  code={`
+// id IN (SELECT user_id FROM orders WHERE active = 1)
+Cond.in('id', Q.select().field('user_id').from('orders').where(Cond.equal('active', 1)));
+`}
+/>
+
+#### Empty IN is fail-closed
+
+An empty (or \`null\`) value list renders \`IN (NULL)\` — a condition that never
+matches — instead of being dropped. This is intentional: an empty \`IN\` must
+never silently mean "no filter", which would expose every row. Because it is a
+real condition, it also survives serialization:
+
+<QueryPreview
+  code={`
+// foo IN (NULL)  — never matches, never silently dropped
+Cond.in('foo', []);
+`}
+/>
+
+### NOT IN
+
+To check if a column's value is **not** within a set of values:
+
+<QueryPreview
+  code={`
+Cond.notIn('foo', [1, 2, 3]);
+`}
+/>
+
+`Cond.notIn` mirrors `Cond.in`: it accepts a subquery and an empty list is
+fail-closed as `NOT IN (NULL)`.
+
+<QueryPreview
+  code={`
+// id NOT IN (SELECT user_id FROM orders WHERE blocked = 1)
+Cond.notIn('id', Q.select().field('user_id').from('orders').where(Cond.equal('blocked', 1)));
+`}
+/>
+
 ### AND
 
 To combine multiple conditions with an AND operator:
