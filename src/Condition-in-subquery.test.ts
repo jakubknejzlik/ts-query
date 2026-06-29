@@ -87,6 +87,34 @@ describe("Cond.in fail-closed for empty/null values", () => {
   });
 });
 
+describe("Cond.in rejects mixed subquery + values (fail-loud)", () => {
+  const sub = () =>
+    Q.select().field("c").from("users").where(Cond.equal("active", 1));
+  const MSG =
+    "Cond.in/notIn: cannot mix a subquery with other values or use multiple subqueries; pass a single subquery or a list of scalar values";
+
+  it("throws for [subquery, scalar, scalar] (subquery first)", () => {
+    expect(() => Cond.in("x", [sub(), "a", "b"] as any)).toThrow(MSG);
+  });
+
+  it("throws for [scalar, subquery] (subquery last)", () => {
+    expect(() => Cond.in("x", ["a", sub()] as any)).toThrow(MSG);
+  });
+
+  it("throws for [subquery, subquery] (multiple subqueries)", () => {
+    expect(() => Cond.in("x", [sub(), sub()] as any)).toThrow(MSG);
+  });
+
+  it("notIn throws for mixed arrays too", () => {
+    expect(() => Cond.notIn("x", [sub(), "a"] as any)).toThrow(MSG);
+  });
+
+  it("still accepts a clean single subquery and a single-element array", () => {
+    expect(() => Cond.in("x", sub())).not.toThrow();
+    expect(() => Cond.in("x", [sub()] as any)).not.toThrow();
+  });
+});
+
 describe("Cond.in non-empty arrays are unchanged", () => {
   it("preserves numeric value lists", () => {
     const cond = Cond.in("foo", [1, 2, 3]);

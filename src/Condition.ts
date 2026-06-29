@@ -20,7 +20,16 @@ const normalizeInValues = (
     return { subquery: values, values: [] };
   }
   const arr = values ?? [];
-  if (arr.length === 1 && arr[0] instanceof SelectQuery) {
+  const subqueryCount = arr.filter((v) => v instanceof SelectQuery).length;
+  if (subqueryCount > 0) {
+    // A subquery is only valid as the sole value: `IN (SELECT ...)`. Mixing a
+    // subquery with scalar values (or multiple subqueries) is invalid SQL — fail
+    // loud rather than emitting malformed SQL / throwing later on deserialize.
+    if (subqueryCount > 1 || arr.length > 1) {
+      throw new Error(
+        "Cond.in/notIn: cannot mix a subquery with other values or use multiple subqueries; pass a single subquery or a list of scalar values"
+      );
+    }
     return { subquery: arr[0] as SelectQuery, values: [] };
   }
   if (arr.length === 0) {
