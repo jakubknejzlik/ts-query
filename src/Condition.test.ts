@@ -80,8 +80,10 @@ describe("Condition", () => {
     expect(Cond.in("foo", ["1", "2", "3"])?.toSQL(flavor)).toEqual(
       '`foo` IN ("1", "2", "3")'
     );
-    expect(Cond.in("foo", [])).toBeNull();
-    expect(Cond.in("foo", null)).toBeNull();
+    // Fail-closed: empty / null lists render `IN (NULL)` (never matches) rather than
+    // dropping the filter, so an empty IN can never silently expose all rows.
+    expect(Cond.in("foo", [])?.toSQL(flavor)).toEqual("`foo` IN (NULL)");
+    expect(Cond.in("foo", null)?.toSQL(flavor)).toEqual("`foo` IN (NULL)");
   });
 
   // NOT IN
