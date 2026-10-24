@@ -20,7 +20,7 @@ return {
 
 # Serialization & Deserialization
 
-Serialization allows queries to be transferred securely between the client and server, enabling them to be reconstructed on the backend and executed against a database. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
+Serialization preserves query structure between the client and server. It does not authorize tables or columns, or make raw SQL safe. Use the opt-in guards below for untrusted input. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
 
 ### Serializing on the Client
 
@@ -33,11 +33,15 @@ Convert a query into a serialized format before sending it to the server. This e
 Reconstruct the serialized query on the backend and convert it into SQL for execution. This allows for dynamic query generation and execution while maintaining security and consistency.
 
 <CodePreview
-  code={`const serialized = Q.select().from('table').serialize();
-return Q.deserialize(serialized).toSQL(Q.flavors.mysql);`}
+  code={`const serialized = Q.select().from('table').serialize({version: 1});
+return Q.deserialize(serialized, {
+  allowRaw: false,
+  functions: [],
+  maxDepth: 2,
+}).toSQLWithBindings(Q.flavors.sqlite);`}
 />
 
-Using serialization and deserialization, developers can build efficient client-server architectures where complex queries are created on the frontend and executed on the backend without direct SQL exposure, reducing potential SQL injection risks.
+Before rendering, use the exported `walk(query, visitor)` or `summarize(query)` to apply your table, column, and operation policy. The README section "Guarding untrusted queries" includes a complete allowlist, visitor, tenant transform, and parameterized SQL example. Default `serialize()` stays unversioned; `serialize({version: 1})` adds the root version envelope.
 
 # Compression
 
