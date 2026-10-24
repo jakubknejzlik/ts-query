@@ -61,7 +61,10 @@ walk(query, {
     if (name !== "users") throw new Error(`Table denied: ${name}`);
   },
   onColumn(table, name) {
-    if ((table !== undefined && table !== "u") || !["id", "active"].includes(name)) {
+    if (
+      (table !== undefined && table !== "u") ||
+      !["id", "active"].includes(name)
+    ) {
       throw new Error(`Column denied: ${table ?? ""}.${name}`);
     }
   },
@@ -70,9 +73,8 @@ walk(query, {
 // Supply tenant identity from the authenticated server context.
 const tenantId = "tenant-123";
 const { sql, bindings } = query.toSQLWithBindings(Q.flavors.sqlite, {
-  transformTable: name => Q.select()
-    .from(name)
-    .where(Cond.equal("tenant_id", tenantId)),
+  transformTable: (name) =>
+    Q.select().from(name).where(Cond.equal("tenant_id", tenantId)),
 });
 // sql: SELECT COUNT(`u`.`id`) AS `count` FROM
 //      (SELECT * FROM `users` WHERE `tenant_id` = ?) AS `u` WHERE `u`.`active` = ?
@@ -97,7 +99,52 @@ Bindings preserve JavaScript values, including Date, boolean,
 and bigint; your database adapter must support or convert those types.
 DATEADD binds the SQLite modifier or PostgreSQL interval as a single string;
 MySQL keeps its validated interval unit as SQL syntax and binds the amount.
-Existing `toSQL()` still returns exactly the same inline SQL.
+Without transforms, existing `toSQL()` output is unchanged.
+
+Transforms reach every nested SELECT in the supplied AST, including condition
+subqueries, function arguments, JOIN ON, HAVING, GROUP BY, ORDER BY, UNION operands,
+INSERT SELECT, UPDATE sub-selects, and CREATE TABLE/VIEW AS SELECT. Both inline
+and bound rendering use the same transforms. Custom flavor overrides of
+`escapeFunction(fn, options?)` and `escapeOperation(fn, options?)` must forward
+`options` to their arguments' `toSQL(flavor, options)` calls. Mutation targets continue to use
+`transformInsertMutation`, `transformUpdateMutation`, and `transformDeleteMutation`;
+`transformTable` scopes their SELECT sources. A replacement returned by
+`transformTable` is trusted SQL-builder AST: that table callback is disabled within
+the replacement to prevent recursive wrapping. Scope any additional tables your
+replacement introduces in the trusted callback itself.
+
+Use `Cond.exists(subquery)` for policy quantifiers such as “has any matching
+patient”, and `Cond.notExists(subquery)` for “has none”. Unlike `NOT IN`,
+`NOT EXISTS` is unaffected by NULL values in the selected subquery column:
+
+```ts
+const matchingPatient = Q.select()
+  .field("p.id")
+  .from("patients", "p")
+  .where(Cond.columnEqual("p.id", "j.patient_id"));
+const policyQuery = Q.select()
+  .field("j.id")
+  .from("jobs", "j")
+  .where(Cond.exists(matchingPatient)); // or Cond.notExists(matchingPatient)
+const result = policyQuery.toSQLWithBindings(Q.flavors.sqlite, {
+  transformTable: (name) =>
+    Q.select().from(name).where(Cond.equal("organization_id", tenantId)),
+});
+// SELECT `j`.`id` FROM (SELECT * FROM `jobs` WHERE `organization_id` = ?) AS `j`
+// WHERE EXISTS (SELECT `p`.`id` FROM
+//   (SELECT * FROM `patients` WHERE `organization_id` = ?) AS `p`
+//   WHERE `p`.`id` = `j`.`patient_id`)
+// bindings: [tenantId, tenantId]
+```
+
+Give correlated tables explicit aliases (`j` and `p` here). Table transforms keep
+those aliases on their derived-table wrappers and do not rewrite column references;
+`j.patient_id` therefore still refers to the wrapped outer row. The wrapper must
+expose the referenced columns (for example, via `SELECT *`). Without an explicit
+alias, derived tables use the existing default `t`; original table-name qualifiers
+are not automatically remapped. EXISTS predicates support legacy and versioned
+query serialization, strict deserialization, `walk`, and `summarize`; their SELECT
+adds one subquery level for both `maxDepth` validation and summary depth.
 
 `Q.deserialize(input: string, options?: DeserializeOptions)` accepts plain JSON
 or the existing gzip/base64 compressed payload. Its new options are all optional:
@@ -153,7 +200,11 @@ are exported from the package root.
 `serialize({ version: 1 })` opts in to a root `v: 1` member, for example:
 
 ```json
-{"v":1,"type":"SelectQuery","tables":[{"type":"Table","source":"users"}]}
+{
+  "v": 1,
+  "type": "SelectQuery",
+  "tables": [{ "type": "Table", "source": "users" }]
+}
 ```
 
 Version 1 retains the existing AST fields and expression encodings:

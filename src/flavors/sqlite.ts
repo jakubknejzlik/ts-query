@@ -1,42 +1,65 @@
+import { ISequelizableOptions } from "../interfaces";
 import { ExpressionBase, FunctionExpression } from "../Expression";
 import { MySQLFlavor } from "./mysql";
 
 export class SQLiteFlavor extends MySQLFlavor {
   // protected columnQuotes: string = "'"
   protected stringQuotes: string = "'";
-  escapeFunction(fn: FunctionExpression): string {
-    const args = fn.value.map((arg) =>
-      ExpressionBase.deserialize(arg).toSQL(this)
-    );
+  escapeFunction(
+    fn: FunctionExpression,
+    options?: ISequelizableOptions
+  ): string {
+    const renderArgs = () =>
+      fn.value.map((arg) =>
+        ExpressionBase.deserialize(arg).toSQL(this, options)
+      );
     if (fn.name === "MONTH") {
-      return `strftime('%m', ${args.join(", ")}, 'localtime')`;
+      return `strftime('%m', ${renderArgs().join(", ")}, 'localtime')`;
     }
     if (fn.name === "YEAR") {
-      return `strftime('%Y', ${args.join(", ")}, 'localtime')`;
+      return `strftime('%Y', ${renderArgs().join(", ")}, 'localtime')`;
     }
     if (fn.name === "IF") {
-      return `IIF(${args.join(", ")})`;
+      return `IIF(${renderArgs().join(", ")})`;
     }
     if (fn.name === "DATEADD") {
-      const argsValues = fn.value.map((x) =>
-        ExpressionBase.deserializeValue(x)
-      );
-      const interval = parseInt(argsValues[1].value.toString(), 10);
+      // Only interval operands are literals; the date may be a nested expression.
+      const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
+      const interval = parseInt(intervalValue.toString(), 10);
       if (isNaN(interval)) {
-        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+        throw new Error(`Invalid DATEADD interval: ${intervalValue}`);
       }
-      const intervalType = argsValues[2].value.toString().toLowerCase();
+      const intervalType = ExpressionBase.deserializeValue(fn.value[2])
+        .value.toString()
+        .toLowerCase();
       // SQLite supports: years, months, days, hours, minutes, seconds
-      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'years', 'months', 'days', 'hours', 'minutes', 'seconds'];
+      const validIntervalTypes = [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "years",
+        "months",
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+      ];
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
       if (this.bindValue) {
-        return `DateTime(${args[0]}, ${this.bindValue(`${interval >= 0 ? "+" + interval : interval} ${intervalType}`)})`;
+        return `DateTime(${renderArgs()[0]}, ${this.bindValue(
+          `${interval >= 0 ? "+" + interval : interval} ${intervalType}`
+        )})`;
       }
-      return `DateTime(${args[0]}, '${interval >= 0 ? "+" + interval : interval} ${intervalType}')`;
+      return `DateTime(${renderArgs()[0]}, '${
+        interval >= 0 ? "+" + interval : interval
+      } ${intervalType}')`;
     }
-    return super.escapeFunction(fn);
+    return super.escapeFunction(fn, options);
   }
   escapeTable(table: string): string {
     return super.escapeTable(table.substring(table.indexOf("@") + 1));

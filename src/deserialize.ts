@@ -205,6 +205,10 @@ export function validateSerializedQuery(
             push(node.subquery, "select", depth + 1);
           else list(node.values, "value", false);
           break;
+        case "ExistsCondition":
+        case "NotExistsCondition":
+          push(node.subquery, "select", depth + 1);
+          break;
         case "NullCondition":
           push(node.key, "expression");
           enumValue(node.isNull, [true, false]);

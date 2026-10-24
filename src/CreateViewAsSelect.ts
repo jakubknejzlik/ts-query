@@ -6,6 +6,7 @@ import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
+  ISequelizableOptions,
   ISerializable,
   ISerializableOptions,
   MetadataOperationType,
@@ -37,20 +38,28 @@ export class CreateViewAsSelect
     return [this._viewName, ...this._select.getTableNames()];
   }
 
-  toSQLWithBindings(flavor?: ISQLFlavor): SQLWithBindings {
-    return toSQLWithBindings(this, flavor);
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
   }
 
-  toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
+  toSQL(
+    flavor: ISQLFlavor = new MySQLFlavor(),
+    options?: ISequelizableOptions
+  ): string {
     const orReplaceStr = this._orReplace ? "OR REPLACE " : "";
     return `CREATE ${orReplaceStr}VIEW ${flavor.escapeTable(
       this._viewName
-    )} AS ${this._select.toSQL(flavor)}`;
+    )} AS ${this._select.toSQL(flavor, options)}`;
   }
 
   // serialization
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
 

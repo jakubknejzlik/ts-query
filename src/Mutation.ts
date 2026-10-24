@@ -22,7 +22,10 @@ type RowRecord = Record<string, Expression>;
 type RowRecordInput = Record<string, Expression | any>;
 
 export class MutationBase {
-  toSQLWithBindings(flavor?: ISQLFlavor, options?: ISequelizableOptions): SQLWithBindings {
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
     return toSQLWithBindings(this as this & ISequelizable, flavor, options);
   }
 
@@ -101,7 +104,7 @@ export class DeleteMutation
     let sql = `DELETE FROM ${this._table.toSQL(flavor)}`;
     if (this._where.length) {
       sql += ` WHERE ${this._where
-        .map((condition) => condition.toSQL(flavor))
+        .map((condition) => condition.toSQL(flavor, options))
         .join(" AND ")}`;
     }
     return sql;
@@ -115,7 +118,9 @@ export class DeleteMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
 
@@ -151,7 +156,9 @@ export class InsertMutation
   public getValues(): RowRecord[] | undefined {
     return this._values;
   }
-  public getSelectWithColumns(): [SelectQuery, string[] | undefined] | undefined {
+  public getSelectWithColumns():
+    | [SelectQuery, string[] | undefined]
+    | undefined {
     return this._selectWithColumns;
   }
 
@@ -213,7 +220,7 @@ export class InsertMutation
         columns
           ? ` (${columns.map((k) => flavor.escapeColumn(k)).join(", ")})`
           : ""
-      } ${query.toSQL(flavor)}`;
+      } ${query.toSQL(flavor, options)}`;
     }
     throw new Error("values or select must be set for insert query");
   }
@@ -226,7 +233,9 @@ export class InsertMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
 
@@ -321,14 +330,14 @@ export class UpdateMutation
       .map(([key, value]) => {
         return `${flavor.escapeColumn(key)} = ${
           value instanceof SelectQuery
-            ? `(${value.toSQL(flavor)})`
-            : value.toSQL(flavor)
+            ? `(${value.toSQL(flavor, options)})`
+            : value.toSQL(flavor, options)
         }`;
       })
       .join(", ")}`;
     if (this._where.length) {
       sql += ` WHERE ${this._where
-        .map((condition) => condition.toSQL(flavor))
+        .map((condition) => condition.toSQL(flavor, options))
         .join(" AND ")}`;
     }
     return sql;
@@ -342,7 +351,9 @@ export class UpdateMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
 

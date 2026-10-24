@@ -1,3 +1,4 @@
+import { ISequelizableOptions } from "../interfaces";
 import dayjs from "dayjs";
 import {
   ExpressionBase,
@@ -28,29 +29,43 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
     }
     return str;
   }
-  escapeFunction(fn: FunctionExpression): string {
-    const args = fn.value.map((arg) =>
-      ExpressionBase.deserialize(arg).toSQL(this)
-    );
-
+  escapeFunction(
+    fn: FunctionExpression,
+    options?: ISequelizableOptions
+  ): string {
     if (fn.name === "DATEADD") {
-      const argsValues = fn.value.map((x) =>
-        ExpressionBase.deserializeValue(x)
+      const args = fn.value.map((arg) =>
+        ExpressionBase.deserialize(arg).toSQL(this, options)
       );
-      const interval = parseInt(argsValues[1].value.toString(), 10);
+      // Only interval operands are literals; the date may be a nested expression.
+      const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
+      const interval = parseInt(intervalValue.toString(), 10);
       if (isNaN(interval)) {
-        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+        throw new Error(`Invalid DATEADD interval: ${intervalValue}`);
       }
-      const intervalType = argsValues[2].value.toString().toLowerCase();
-      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'week', 'quarter'];
+      const intervalType = ExpressionBase.deserializeValue(fn.value[2])
+        .value.toString()
+        .toLowerCase();
+      const validIntervalTypes = [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "week",
+        "quarter",
+      ];
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
       if (this.bindValue) {
-        return `date_add(${this.bindValue(intervalType)}, ${this.bindValue(interval)}, ${args[0]})`;
+        return `date_add(${this.bindValue(intervalType)}, ${this.bindValue(
+          interval
+        )}, ${args[0]})`;
       }
       return `date_add('${intervalType}', ${interval}, ${args[0]})`;
     }
-    return super.escapeFunction(fn);
+    return super.escapeFunction(fn, options);
   }
 }

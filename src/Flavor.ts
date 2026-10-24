@@ -1,3 +1,4 @@
+import { ISequelizableOptions } from "./interfaces";
 import {
   ExpressionRawValue,
   ExpressionValue,
@@ -16,8 +17,15 @@ export interface ISQLFlavor {
   escapeRawValue(value: ExpressionRawValue): string;
   escapeValue(value: ExpressionValue): string;
   escapeLimitAndOffset(limit?: number, offset?: number): string;
-  escapeFunction(fn: FunctionExpression): string;
-  escapeOperation(fn: OperationExpression): string;
+  /** Custom flavors must forward options when rendering nested arguments. */
+  escapeFunction(
+    fn: FunctionExpression,
+    options?: ISequelizableOptions
+  ): string;
+  escapeOperation(
+    fn: OperationExpression,
+    options?: ISequelizableOptions
+  ): string;
   escapeUnion(unionType: UnionType, leftSQL: string, rightSQL: string): string;
   escapeLikeCondition(
     column: string,

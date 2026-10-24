@@ -5,6 +5,8 @@ import {
   BetweenCondition,
   InCondition,
   NotInCondition,
+  ExistsCondition,
+  NotExistsCondition,
   NullCondition,
   LikeCondition,
   ColumnComparisonCondition,
@@ -148,6 +150,11 @@ export function walk(query: GuardQuery, visitor: QueryVisitor): void {
       expression(node.key, depth);
       if (node.subquery) visit(node.subquery, depth + 1);
       else node.values.forEach((v) => expression(v, depth));
+    } else if (
+      node instanceof ExistsCondition ||
+      node instanceof NotExistsCondition
+    ) {
+      visit(node.subquery, depth + 1);
     } else if (node instanceof ColumnComparisonCondition) {
       expression(node.leftKey, depth);
       expression(node.rightKey, depth);
