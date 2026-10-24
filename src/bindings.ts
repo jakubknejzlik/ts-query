@@ -27,15 +27,18 @@ export function toSQLWithBindings(
   boundFlavor.escapeLimitAndOffset = (limit, offset) =>
     flavor.escapeLimitAndOffset.call(
       boundFlavor,
-      limit === undefined ? undefined : bind(limit) as any,
-      offset === undefined ? undefined : bind(offset) as any
+      limit === undefined ? undefined : (bind(limit) as any),
+      offset === undefined ? undefined : (bind(offset) as any)
     );
   const rendered = query.toSQL(boundFlavor, options);
   const bindings: unknown[] = [];
-  const sql = rendered.replace(/\u0000tsq\([a-z0-9]+:(\d+)\)\u0000/g, (token, index) => {
-    if (!token.startsWith(prefix)) return token;
-    bindings.push(values[Number(index)]);
-    return flavor.parameterPlaceholder?.(bindings.length) ?? "?";
-  });
+  const sql = rendered.replace(
+    /\u0000tsq\([a-z0-9]+:(\d+)\)\u0000/g,
+    (token, index) => {
+      if (!token.startsWith(prefix)) return token;
+      bindings.push(values[Number(index)]);
+      return flavor.parameterPlaceholder?.(bindings.length) ?? "?";
+    }
+  );
   return { sql, bindings };
 }
