@@ -92,7 +92,8 @@ only a root SELECT before adding its trusted derived table. Rendering uses
 Values in conditions, IN lists, typed function arguments, mutations, and
 LIMIT/OFFSET become bindings in SQL occurrence order. Identifiers stay quoted.
 Use `Q.value(value)` for literals; explicit raw SQL and legacy SQL expression
-text remain SQL. Bindings preserve JavaScript values, including Date, boolean,
+text remain SQL; legacy raw NULL literal markers are bound as null.
+Bindings preserve JavaScript values, including Date, boolean,
 and bigint; your database adapter must support or convert those types.
 DATEADD binds the SQLite modifier or PostgreSQL interval as a single string;
 MySQL keeps its validated interval unit as SQL syntax and binds the amount.

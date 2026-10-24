@@ -24,6 +24,11 @@ export function toSQLWithBindings(
   const boundFlavor: ISQLFlavor = Object.create(flavor);
   boundFlavor.bindValue = bind;
   boundFlavor.escapeValue = (value: ExpressionValue) => bind(value);
+  // Older builders use a raw NULL node for UPDATE nulls, empty IN and VALUES.
+  boundFlavor.escapeRawValue = (value) =>
+    value === "NULL"
+      ? bind(null)
+      : flavor.escapeRawValue.call(boundFlavor, value);
   boundFlavor.escapeLimitAndOffset = (limit, offset) =>
     flavor.escapeLimitAndOffset.call(
       boundFlavor,

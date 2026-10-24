@@ -193,6 +193,18 @@ describe("Parameterized SQL", () => {
     ).toEqual({ sql: "SELECT CURRENT_TIMESTAMP, ? ", bindings: [null] });
   });
 
+  it("binds legacy NULL literal nodes in mutation, IN and VALUES builders", () => {
+    const flavor = Q.flavors.sqlite;
+    expect(
+      Q.update("users").set({ deleted: null }).toSQLWithBindings(flavor)
+    ).toEqual({ sql: "UPDATE `users` SET `deleted` = ?", bindings: [null] });
+    expect(
+      Q.select().where(Cond.in("id", [])).toSQLWithBindings(flavor).bindings
+    ).toEqual([null]);
+    expect(Q.values([{ id: null }]).toSQLWithBindings(flavor).bindings).toEqual(
+      [null]
+    );
+  });
   it("renders correctly when a token nonce has no fractional digits", () => {
     const random = jest.spyOn(Math, "random").mockReturnValue(0);
     try {
