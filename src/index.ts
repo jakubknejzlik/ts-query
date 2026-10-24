@@ -60,3 +60,5 @@ export type { ISequelizableOptions, ISerializableOptions } from "./interfaces";
 
 export { DeserializeError } from "./deserialize";
 export type { DeserializeOptions, DeserializeErrorCode } from "./deserialize";
+export { walk, summarize } from "./visitor";
+export type { GuardQuery, MutationKind, QueryVisitor, QueryColumn, QuerySummary } from "./visitor";
