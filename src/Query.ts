@@ -1,3 +1,4 @@
+import { DeserializeOptions, DeserializeError, assertSerializationVersion, validateSerializedQuery } from "./deserialize";
 import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Dayjs, isDayjs } from "dayjs";
 import pako from "pako";
@@ -551,7 +552,7 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable, IComp
 
   // serialization
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
   toJSON(): any {
@@ -634,13 +635,15 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable, IComp
   }
 }
 
-const deserialize = (payload: string) => {
+const deserialize = (payload: string, options?: DeserializeOptions) => {
   try {
     const parsed =
-      payload[0] === "{"
+      payload.trimStart()[0] === "{"
         ? JSON.parse(payload)
         : JSON.parse(decompressString(payload));
 
+    assertSerializationVersion(parsed);
+    if (options !== undefined) validateSerializedQuery(parsed, options);
     switch (parsed.type as OperationType) {
       case OperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
@@ -658,7 +661,8 @@ const deserialize = (payload: string) => {
         throw new Error("Unknown mutation type");
     }
   } catch (e) {
-    throw new Error(`Error parsing query: ${(e as Error).message}`);
+    if (e instanceof DeserializeError) throw e;
+    throw new DeserializeError("invalid_node", `Error parsing query: ${(e as Error).message}`);
   }
 };
 

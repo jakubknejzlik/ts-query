@@ -113,7 +113,7 @@ export class DeleteMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
 
@@ -224,7 +224,7 @@ export class InsertMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
 
@@ -340,7 +340,7 @@ export class UpdateMutation
   }
 
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON());
     return opts.compress ? compressString(json) : json;
   }
 

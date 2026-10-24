@@ -57,3 +57,6 @@ export { SQLTarget } from "./targets";
 export { toSQLWithBindings } from "./bindings";
 export type { SQLWithBindings } from "./bindings";
 export type { ISequelizableOptions, ISerializableOptions } from "./interfaces";
+
+export { DeserializeError } from "./deserialize";
+export type { DeserializeOptions, DeserializeErrorCode } from "./deserialize";
