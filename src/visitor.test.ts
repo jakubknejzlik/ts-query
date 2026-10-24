@@ -120,6 +120,24 @@ describe("AST visitor", () => {
     expect(onRaw).toHaveBeenCalledTimes(2);
     expect(summarize(query).hasRaw).toBe(true);
   });
+  it("flags compound legacy markers and reports ordinary, numeric and Unicode column names", () => {
+    const query = Q.select()
+      .field("#id#a--")
+      .field("&value&a--")
+      .field("price")
+      .field("123")
+      .field("jméno")
+      .field("-tax");
+    const summary = summarize(query);
+    expect(summary.hasRaw).toBe(true);
+    expect(summary.columns.map((column) => column.name)).toEqual([
+      "id",
+      "price",
+      "123",
+      "jméno",
+      "tax",
+    ]);
+  });
   it("visits INSERT SELECT, UPDATE scalar subqueries and DELETE conditions", () => {
     const select = Q.select().field(Fn.count("id")).from("orders");
     const insert = Q.insert("archive").select(select, ["count"]);
@@ -191,7 +209,7 @@ describe("AST visitor", () => {
     const query = Q.deserialize(payload, {
       allowRaw: false,
       functions: ["COUNT"],
-      maxDepth: 2,
+      maxDepth: 0,
     });
     if (!(query instanceof SelectQuery)) throw new Error("Expected SELECT");
     walk(query, {

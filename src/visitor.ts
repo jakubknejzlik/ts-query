@@ -23,7 +23,6 @@ import { InsertMutation, UpdateMutation, DeleteMutation } from "./Mutation";
 import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { CreateViewAsSelect } from "./CreateViewAsSelect";
 import { MetadataOperationType } from "./interfaces";
-import { isIdentifier } from "./deserialize";
 
 export type GuardQuery =
   | SelectQuery
@@ -112,19 +111,26 @@ export function walk(query: GuardQuery, visitor: QueryVisitor): void {
         return;
       }
       const text = String(value.value);
-      const remainder = text
-        .replace(/&([^#]*)&/g, "")
-        .replace(/#([^#]+)#/g, (_, name) => {
+      if (/^&[^#]*&$/.test(text) || text === "NULL" || /^[+-]\d+$/.test(text))
+        return;
+      const reference = text.match(/^#([^#]+)#$/);
+      if (reference) {
+        column(reference[1]);
+        return;
+      }
+      const unary = text.match(/^-([A-Za-z_][A-Za-z0-9_.]*\*?)$/);
+      if (unary) {
+        column(unary[1]);
+        return;
+      }
+      if (/["'`() ,#&]/.test(text)) {
+        // Mark free-form SQL and still expose explicit column references.
+        text.replace(/#([^#]+)#/g, (_, name) => {
           column(name);
           return "";
         });
-      if (
-        !remainder ||
-        /^(?:NULL|TRUE|FALSE|[+-]?\d+(?:\.\d+)?)$/.test(remainder)
-      )
-        return;
-      if (isIdentifier(remainder)) column(remainder);
-      else visitor.onRaw?.();
+        visitor.onRaw?.();
+      } else column(text);
     }
   };
   const condition = (node: Condition, depth: number): void => {
