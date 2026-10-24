@@ -662,7 +662,9 @@ const deserialize = (payload: string, options?: DeserializeOptions) => {
     }
   } catch (e) {
     if (e instanceof DeserializeError) throw e;
-    throw new DeserializeError("invalid_node", `Error parsing query: ${(e as Error).message}`);
+    const message = `Error parsing query: ${(e as Error).message}`;
+    if (options !== undefined) throw new DeserializeError("invalid_node", message);
+    throw new Error(message);
   }
 };
 

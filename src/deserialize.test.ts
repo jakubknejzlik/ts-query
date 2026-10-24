@@ -6,7 +6,9 @@ import {
   DeserializeErrorCode,
   DeserializeOptions,
 } from "./index";
-import { FunctionExpression, OperationExpression } from "./Expression";
+import { MutationBase } from "./Mutation";
+import { compressString } from "./compression";
+import { FunctionExpression } from "./Expression";
 
 const checked = (
   query: { serialize(): string },
@@ -40,6 +42,15 @@ describe("Guarded deserialization", () => {
       }).toSQL()
     ).toBe(query.toSQL());
   });
+  it("preserves the legacy error type when guard options are omitted", () => {
+    try {
+      Q.deserialize("{bad");
+      throw new Error("Expected failure");
+    } catch (error) {
+      expect((error as Error).constructor).toBe(Error);
+      expect((error as Error).message).toMatch(/^Error parsing query:/);
+    }
+  });
   it("preserves permissive legacy behavior when options are omitted", () => {
     const query = Q.select()
       .field(Q.raw("NOW()"))
@@ -59,6 +70,9 @@ describe("Guarded deserialization", () => {
     Q.delete("users").where(Cond.equal("x", Q.raw("1"))),
     Q.insert("users").select(Q.select().field(Q.raw("NOW()"))),
     Q.select().field("COUNT(id)"),
+    Q.select().field("&value&a--"),
+    Q.select().field("#id#a--"),
+    Q.select().field("#id##name#"),
     Q.select().where(Cond.equal("COUNT(id)", 1)),
   ])("rejects raw SQL at every executable location (%#)", (query) =>
     fails(query.serialize(), "raw_not_allowed")
@@ -187,6 +201,13 @@ describe("Guarded deserialization", () => {
   it.each([-1, 1.5, NaN, Infinity])("rejects invalid maxDepth %s", (maxDepth) =>
     fails(Q.select().serialize(), "invalid_node", { maxDepth })
   );
+  it("rejects malformed guard options", () => {
+    fails(Q.select().serialize(), "invalid_node", { allowRaw: "false" } as any);
+    fails(Q.select().serialize(), "invalid_node", {
+      functions: "COUNT",
+    } as any);
+    fails(Q.select().serialize(), "invalid_node", { functions: [1] } as any);
+  });
   it("returns a typed error for invalid JSON and compressed data", () => {
     fails("{bad", "invalid_node");
     fails("not gzip", "invalid_node");
@@ -246,7 +267,7 @@ describe("Versioned serialization", () => {
       ).toBe(query.toSQL());
     }
   );
-  it.each([0, 2, "1", null])(
+  it.each([0, 2, "1", null, { toString: "invalid" }, [1]])(
     "rejects unknown root version %s with and without guard options",
     (v) => {
       const serialized = JSON.stringify({ ...Q.select().toJSON(), v });
@@ -254,6 +275,11 @@ describe("Versioned serialization", () => {
       expect(() => Q.deserialize(serialized)).toThrow(DeserializeError);
     }
   );
+  it("rejects unsupported versions in compressed payloads and mutation deserialization", () => {
+    const input = JSON.stringify({ ...Q.delete("users").toJSON(), v: 2 });
+    fails(compressString(input), "unsupported_version");
+    expect(() => MutationBase.deserialize(input)).toThrow(DeserializeError);
+  });
   it("keeps version metadata out of nested AST nodes", () => {
     const serialized = JSON.parse(
       Q.select().from(Q.select().from("users")).serialize({ version: 1 })

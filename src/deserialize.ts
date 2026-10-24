@@ -27,7 +27,7 @@ export function assertSerializationVersion(node: any): void {
   if (node && Object.prototype.hasOwnProperty.call(node, "v") && node.v !== 1) {
     throw new DeserializeError(
       "unsupported_version",
-      `Unsupported serialization version: ${node.v}`
+      `Unsupported serialization version: ${JSON.stringify(node.v)}`
     );
   }
 }
@@ -50,6 +50,9 @@ export function validateSerializedQuery(
     if (options.allowRaw === false)
       throw new DeserializeError("raw_not_allowed");
   };
+  if (options.allowRaw !== undefined && typeof options.allowRaw !== "boolean") {
+    invalid("allowRaw must be a boolean");
+  }
   if (
     options.maxDepth !== undefined &&
     (!Number.isInteger(options.maxDepth) || options.maxDepth < 0)
@@ -146,20 +149,19 @@ export function validateSerializedQuery(
         const parsed = JSON.parse(node);
         push(parsed, "condition");
       } else if (options.allowRaw === false) {
-        // The legacy expression language can embed SQL; only identifiers,
-        // numeric constants, and explicitly delimited strings/columns are safe.
-        const remainder = node
-          .replace(/&([^#]*)&/g, "")
-          .replace(/#([^#]+)#/g, (_, name) => {
-            if (!isIdentifier(name)) invalid("Invalid column reference");
-            return "";
-          });
-        if (
-          remainder &&
-          !isIdentifier(remainder) &&
-          !/^[+-]?\d+(?:\.\d+)?$/.test(remainder)
-        )
+        // Accept complete tokens only. Removing safe fragments first would
+        // admit SQL suffixes such as `#id#a--` outside the quoted column.
+        const column = node.match(/^#([^#]+)#$/);
+        if (column) {
+          if (!isIdentifier(column[1])) invalid("Invalid column reference");
+        } else if (
+          !isIdentifier(node) &&
+          !/^[+-]?\d+(?:\.\d+)?$/.test(node) &&
+          !/^-([A-Za-z_][A-Za-z0-9_.]*\*?)$/.test(node) &&
+          !/^&[^#]*&$/.test(node)
+        ) {
           raw();
+        }
       }
       continue;
     }

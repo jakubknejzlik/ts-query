@@ -1,3 +1,4 @@
+import { assertSerializationVersion } from "./deserialize";
 import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Condition } from "./Condition";
 import { Expression } from "./Expression";
@@ -48,6 +49,7 @@ export class MutationBase {
 
   static deserialize(json: string) {
     const parsed = JSON.parse(json);
+    assertSerializationVersion(parsed);
     switch (parsed.type) {
       case OperationType.DELETE:
         return DeleteMutation.fromJSON(parsed);
