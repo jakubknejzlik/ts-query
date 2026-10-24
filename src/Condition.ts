@@ -1,8 +1,9 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Dayjs } from "dayjs";
 import { ExpressionBase, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q, SelectQuery } from "./Query";
-import { ISequelizable, ISerializable } from "./interfaces";
+import { ISequelizable, ISequelizableOptions, ISerializable } from "./interfaces";
 
 type ConditionValue = ExpressionValue | Dayjs;
 
@@ -39,6 +40,10 @@ const normalizeInValues = (
 };
 
 export class Condition implements ISequelizable, ISerializable {
+  toSQLWithBindings(flavor?: ISQLFlavor, options?: ISequelizableOptions): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
   toSQL(flavor: ISQLFlavor): string {
     throw new Error("Method not implemented.");
   }

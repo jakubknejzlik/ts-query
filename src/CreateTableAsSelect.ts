@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { ISQLFlavor } from "./Flavor";
 import { SelectQuery } from "./Query";
 import { compressString } from "./compression";
@@ -42,6 +43,10 @@ export class CreateTableAsSelect
 
   getTableNames(): string[] {
     return [this._tableName, ...this._select.getTableNames()];
+  }
+
+  toSQLWithBindings(flavor?: ISQLFlavor): SQLWithBindings {
+    return toSQLWithBindings(this, flavor);
   }
 
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {

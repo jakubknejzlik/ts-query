@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Condition } from "./Condition";
 import { Expression } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
@@ -20,6 +21,10 @@ type RowRecord = Record<string, Expression>;
 type RowRecordInput = Record<string, Expression | any>;
 
 export class MutationBase {
+  toSQLWithBindings(flavor?: ISQLFlavor, options?: ISequelizableOptions): SQLWithBindings {
+    return toSQLWithBindings(this as this & ISequelizable, flavor, options);
+  }
+
   protected _table: Table;
 
   constructor(table: string, alias?: string) {

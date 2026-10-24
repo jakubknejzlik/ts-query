@@ -21,6 +21,7 @@ type FlavorOptions = {
 };
 
 export class DefaultFlavor implements ISQLFlavor {
+  bindValue?: (value: unknown) => string;
   protected columnQuotes = "`";
   protected stringQuotes = `"`;
 
@@ -140,7 +141,7 @@ export class DefaultFlavor implements ISQLFlavor {
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
-      return `DATE_ADD(${args[0]}, INTERVAL ${interval} ${intervalType.toUpperCase()})`;
+      return `DATE_ADD(${args[0]}, INTERVAL ${this.bindValue ? this.bindValue(interval) : interval} ${intervalType.toUpperCase()})`;
     }
     return `${fn.name}(${args.join(",")})`;
   }

@@ -7,6 +7,10 @@ import {
 import { UnionType } from "./Query";
 
 export interface ISQLFlavor {
+  /** One-based placeholder index; defaults to `?` when omitted. */
+  parameterPlaceholder?(index: number): string;
+  /** Used by the binding renderer for flavor-specific literal syntax. */
+  bindValue?(value: unknown): string;
   escapeColumn(name: string, legacy?: boolean): string;
   escapeTable(table: string): string;
   escapeRawValue(value: ExpressionRawValue): string;

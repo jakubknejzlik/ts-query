@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import {
@@ -16,6 +17,10 @@ export type ExpressionValue =
   | Date;
 
 export class ExpressionBase implements ISerializable, ISequelizable {
+  toSQLWithBindings(flavor?: ISQLFlavor, options?: ISequelizableOptions): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
   static deserialize(value: ExpressionValue): ExpressionBase {
     if (value instanceof Date) {
       return ValueExpression.deserialize(value);

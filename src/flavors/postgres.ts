@@ -2,6 +2,10 @@ import { ExpressionBase, FunctionExpression } from "../Expression";
 import { DefaultFlavor } from "./default";
 
 export class PostgresFlavor extends DefaultFlavor {
+  parameterPlaceholder(index: number): string {
+    return `$${index}`;
+  }
+
   protected columnQuotes = '"';
   protected stringQuotes = "'";
 
@@ -30,6 +34,9 @@ export class PostgresFlavor extends DefaultFlavor {
       ];
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
+      }
+      if (this.bindValue) {
+        return `(${args[0]} + CAST(${this.bindValue(`${interval} ${intervalType}`)} AS INTERVAL))`;
       }
       return `(${args[0]} + INTERVAL '${interval} ${intervalType}')`;
     }

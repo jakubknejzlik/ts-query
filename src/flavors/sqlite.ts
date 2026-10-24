@@ -31,6 +31,9 @@ export class SQLiteFlavor extends MySQLFlavor {
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
+      if (this.bindValue) {
+        return `DateTime(${args[0]}, ${this.bindValue(`${interval >= 0 ? "+" + interval : interval} ${intervalType}`)})`;
+      }
       return `DateTime(${args[0]}, '${interval >= 0 ? "+" + interval : interval} ${intervalType}')`;
     }
     return super.escapeFunction(fn);

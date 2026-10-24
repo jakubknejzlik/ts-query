@@ -46,6 +46,9 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
+      if (this.bindValue) {
+        return `date_add(${this.bindValue(intervalType)}, ${this.bindValue(interval)}, ${args[0]})`;
+      }
       return `date_add('${intervalType}', ${interval}, ${args[0]})`;
     }
     return super.escapeFunction(fn);

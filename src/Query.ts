@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Dayjs, isDayjs } from "dayjs";
 import pako from "pako";
 import { compressString, decompressString } from "./compression";
@@ -139,6 +140,10 @@ export const escapeTable = (
 };
 
 export class QueryBase implements ISequelizable, IMetadata {
+  toSQLWithBindings(flavor?: ISQLFlavor, options?: ISequelizableOptions): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
   protected _tables: Table[] = [];
   protected _joins?: Join[] = [];
 

@@ -53,3 +53,7 @@ export type { ExpressionRawValue, ExpressionValue } from "./Expression";
 
 // Target exports
 export { SQLTarget } from "./targets";
+
+export { toSQLWithBindings } from "./bindings";
+export type { SQLWithBindings } from "./bindings";
+export type { ISequelizableOptions, ISerializableOptions } from "./interfaces";
