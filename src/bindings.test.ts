@@ -9,6 +9,24 @@ import {
 import { inlineBindings, getBindingComparisons } from "./test-bindings";
 
 describe("Parameterized SQL", () => {
+  it.each([
+    "./index",
+    "./Query",
+    "./Mutation",
+    "./Expression",
+    "./Condition",
+    "./bindings",
+  ])("supports a fresh %s entry-point import", (entry) => {
+    jest.isolateModules(() => {
+      require(entry);
+      const { Q } = require("./Query");
+      const { toSQLWithBindings } = require("./bindings");
+      expect(toSQLWithBindings(Q.select().field(Q.value(1)))).toEqual({
+        sql: "SELECT ? ",
+        bindings: [1],
+      });
+    });
+  });
   it.each(["sqlite", "mysql", "postgres"] as const)(
     "binds conditions, IN, function arguments, LIMIT/OFFSET for %s",
     (name) => {
@@ -173,6 +191,17 @@ describe("Parameterized SQL", () => {
         .field(Q.value(null))
         .toSQLWithBindings(Q.flavors.sqlite)
     ).toEqual({ sql: "SELECT CURRENT_TIMESTAMP, ? ", bindings: [null] });
+  });
+
+  it("renders correctly when a token nonce has no fractional digits", () => {
+    const random = jest.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      expect(
+        Q.select().field(Q.value("value")).toSQLWithBindings(Q.flavors.sqlite)
+      ).toEqual({ sql: "SELECT ? ", bindings: ["value"] });
+    } finally {
+      random.mockRestore();
+    }
   });
 
   it("supports the standalone API and empty bindings", () => {

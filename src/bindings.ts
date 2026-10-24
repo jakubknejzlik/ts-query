@@ -1,6 +1,6 @@
 import { ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
-import { MySQLFlavor } from "./flavors/mysql";
+import { Q } from "./Query";
 import { ISequelizable, ISequelizableOptions } from "./interfaces";
 
 export interface SQLWithBindings {
@@ -11,12 +11,12 @@ export interface SQLWithBindings {
 /** Render using the same compiler and transforms, without changing the supplied flavor. */
 export function toSQLWithBindings(
   query: ISequelizable,
-  flavor: ISQLFlavor = new MySQLFlavor(),
+  flavor: ISQLFlavor = Q.flavors.mysql,
   options?: ISequelizableOptions
 ): SQLWithBindings {
   const values: unknown[] = [];
   // Resolve tokens after rendering: flavors may reorder or repeat function arguments.
-  const prefix = `\u0000tsq(${Math.random().toString(36).slice(2)}:`;
+  const prefix = `\u0000tsq(${Math.random().toString(36).slice(2) || "0"}:`;
   const bind = (value: unknown): string => {
     values.push(value);
     return `${prefix}${values.length - 1})\u0000`;
