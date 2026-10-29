@@ -18,6 +18,28 @@ return {
 };`}
 />
 
+## SQL with bindings across flavors
+
+`toSQLWithBindings` returns SQL and a separate `bindings` array in placeholder order.
+SQLite and MySQL use `?`; PostgreSQL uses `$1`, `$2`, and so on. This query binds
+the `IN` values and `LIMIT` as well as a `DATEADD` interval. SQLite and PostgreSQL
+bind the interval as a string; MySQL binds the amount and keeps the validated unit
+in the SQL. The three results below show the same query for each flavor.
+
+<CodePreview
+  code={`const query = Q.select()
+  .field('id')
+  .field(Fn.dateAdd('created_at', 7, 'day'), 'expires_at')
+  .from('orders')
+  .where(Cond.in('status', ['pending', 'paid']))
+  .limit(10);
+return {
+  sqlite: query.toSQLWithBindings(Q.flavors.sqlite),
+  mysql: query.toSQLWithBindings(Q.flavors.mysql),
+  postgres: query.toSQLWithBindings(Q.flavors.postgres),
+};`}
+/>
+
 # Serialization & Deserialization
 
 Serialization preserves query structure between the client and server. It does not authorize tables or columns, or make raw SQL safe. Use the opt-in guards below for untrusted input. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
@@ -41,7 +63,7 @@ return Q.deserialize(serialized, {
 }).toSQLWithBindings(Q.flavors.sqlite);`}
 />
 
-Before rendering, use the exported `walk(query, visitor)` or `summarize(query)` to apply your table, column, and operation policy. The README section "Guarding untrusted queries" includes a complete allowlist, visitor, tenant transform, and parameterized SQL example. Default `serialize()` stays unversioned; `serialize({version: 1})` adds the root version envelope.
+Before rendering, use the exported `walk(query, visitor)` or `summarize(query)` to apply your table, column, and operation policy. See [Guarding untrusted queries](/docs/7-guarding-untrusted-queries--docs) for live guard, policy, and tenant filter examples. Default `serialize()` stays unversioned; `serialize({version: 1})` adds the root version envelope.
 
 # Compression
 

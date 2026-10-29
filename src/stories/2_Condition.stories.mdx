@@ -1,5 +1,6 @@
 import { Meta } from "@storybook/addon-docs";
 import { QueryPreview } from "./QueryPreview";
+import { CodePreview } from "./CodePreview";
 
 <Meta title="2. Conditions" />
 
@@ -154,6 +155,45 @@ fail-closed as `NOT IN (NULL)`.
 // id NOT IN (SELECT user_id FROM orders WHERE blocked = 1)
 Cond.notIn('id', Q.select().field('user_id').from('orders').where(Cond.equal('blocked', 1)));
 `}
+/>
+
+### EXISTS: correlated subquery
+
+`Cond.exists` keeps an outer row when the subquery finds at least one matching
+row. Use explicit aliases and `Cond.columnEqual` to correlate the inner `o`
+row with the outer `u` row; a column comparison does not bind either name as data.
+
+<CodePreview
+  code={`const matchingOrders = Q.select()
+  .field('o.id')
+  .from('orders', 'o')
+  .where(Cond.columnEqual('o.user_id', 'u.id'))
+  .where(Cond.equal('o.status', 'paid'));
+return Q.select()
+  .field('u.id')
+  .from('users', 'u')
+  .where(Cond.exists(matchingOrders))
+  .toSQLWithBindings(Q.flavors.sqlite);`}
+/>
+
+### NOT EXISTS: no matching rows
+
+`Cond.notExists` keeps an outer row when no correlated row matches. Prefer it
+for this check when the subquery column can contain NULL: `NOT IN` can evaluate
+to unknown if its result set contains NULL, excluding otherwise unmatched rows.
+`NOT EXISTS` tests for matching rows regardless of the selected values.
+
+<CodePreview
+  code={`const matchingOrders = Q.select()
+  .field('o.user_id')
+  .from('orders', 'o')
+  .where(Cond.columnEqual('o.user_id', 'u.id'))
+  .where(Cond.equal('o.status', 'paid'));
+return Q.select()
+  .field('u.id')
+  .from('users', 'u')
+  .where(Cond.notExists(matchingOrders))
+  .toSQLWithBindings(Q.flavors.sqlite);`}
 />
 
 ### AND

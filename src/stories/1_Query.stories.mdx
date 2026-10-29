@@ -1,5 +1,6 @@
 import { Meta } from "@storybook/addon-docs";
 import { QueryPreview } from "./QueryPreview";
+import { CodePreview } from "./CodePreview";
 
 <Meta title="1. Query" />
 
@@ -62,6 +63,30 @@ Q.select()
   .addField('name')
   .addField(Q.null(), 'placeholder');
 `}
+/>
+
+### Typed NULL in strict mode
+
+Use `Q.value(null)` when a serialized query must pass `allowRaw: false`. It is a
+typed literal and becomes a null binding. `Q.null()` uses a legacy raw SQL node,
+so strict deserialization rejects it with `raw_not_allowed`, even though it
+renders as SQL NULL in permissive mode.
+
+<CodePreview
+  code={`const guards = { allowRaw: false, functions: [], maxDepth: 0 };
+const typed = Q.select().field(Q.value(null), 'placeholder');
+const accepted = Q.deserialize(
+  typed.serialize({ version: 1 }),
+  guards,
+).toSQLWithBindings(Q.flavors.sqlite);
+try {
+  const legacy = Q.select().field(Q.null(), 'placeholder');
+  Q.deserialize(legacy.serialize({ version: 1 }), guards);
+  return { accepted, legacy: 'Unexpectedly accepted' };
+} catch (error) {
+  if (!(error instanceof DeserializeError)) throw error;
+  return { accepted, legacy: { name: error.name, code: error.code } };
+}`}
 />
 
 ### Table Aliasing:
