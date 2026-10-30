@@ -1,5 +1,6 @@
 import { ISequelizableOptions } from "./interfaces";
 import {
+  ExpressionBase,
   ExpressionRawValue,
   ExpressionValue,
   FunctionExpression,
@@ -16,6 +17,11 @@ export interface ISQLFlavor {
   escapeTable(table: string): string;
   escapeRawValue(value: ExpressionRawValue): string;
   escapeValue(value: ExpressionValue): string;
+  /** Optional SELECT-field renderer; defaults to the field's own toSQL. */
+  escapeSelectField?(
+    field: ExpressionBase,
+    options?: ISequelizableOptions
+  ): string;
   escapeLimitAndOffset(limit?: number, offset?: number): string;
   /** Custom flavors must forward options when rendering nested arguments. */
   escapeFunction(

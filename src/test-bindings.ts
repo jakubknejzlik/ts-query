@@ -13,17 +13,28 @@ export function inlineBindings(
   flavor: ISQLFlavor
 ): string {
   let index = 0;
-  return result.sql
-    .replace(
-      /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
-      (token) => {
-        if (token[0] !== "?" && token[0] !== "$") return token;
-        const position =
-          token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
-        return flavor.escapeValue(result.bindings[position] as any);
-      }
-    )
-    .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1");
+  return (
+    result.sql
+      // Remove binding casts on placeholder tokens before inserting any values.
+      // Quoted SQL, including user-written casts and cast-like strings, is intact.
+      .replace(
+        /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|CAST\(\$\d+ AS TEXT\)|\$\d+::(?:integer|bigint|numeric|boolean)\b)/g,
+        (token) =>
+          token.startsWith("CAST(") || token[0] === "$"
+            ? token.match(/\$\d+/)[0]
+            : token
+      )
+      .replace(
+        /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
+        (token) => {
+          if (token[0] !== "?" && token[0] !== "$") return token;
+          const position =
+            token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
+          return flavor.escapeValue(result.bindings[position] as any);
+        }
+      )
+      .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1")
+  );
 }
 
 // Every successful outermost toSQL call in the entire test corpus also asserts

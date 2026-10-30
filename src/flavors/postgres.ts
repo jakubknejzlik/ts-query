@@ -1,5 +1,11 @@
 import { ISequelizableOptions } from "../interfaces";
-import { ExpressionBase, FunctionExpression } from "../Expression";
+import {
+  ExpressionBase,
+  ExpressionValue,
+  FunctionExpression,
+  OperationExpression,
+  ValueExpression,
+} from "../Expression";
 import { DefaultFlavor } from "./default";
 
 export class PostgresFlavor extends DefaultFlavor {
@@ -10,14 +16,67 @@ export class PostgresFlavor extends DefaultFlavor {
   protected columnQuotes = '"';
   protected stringQuotes = "'";
 
+  private escapeTypedLiteral(
+    expression: ExpressionBase,
+    options?: ISequelizableOptions
+  ): string {
+    const sql = expression.toSQL(this, options);
+    if (!this.bindValue || !(expression instanceof ValueExpression)) return sql;
+    const value = expression.value;
+    if (typeof value === "string") return `CAST(${sql} AS TEXT)`;
+    if (typeof value === "boolean") return `${sql}::boolean`;
+    if (typeof value === "bigint") return `${sql}::bigint`;
+    if (typeof value === "number") {
+      const type = Number.isInteger(value)
+        ? value >= -2147483648 && value <= 2147483647
+          ? "integer"
+          : "bigint"
+        : "numeric";
+      return `${sql}::${type}`;
+    }
+    // Leave null and Date parameters to their context (Date handling is #22).
+    return sql;
+  }
+
+  private renderArguments(
+    values: ExpressionValue[],
+    options?: ISequelizableOptions,
+    variadicAny = false
+  ): string[] {
+    const args = values.map((value) => ExpressionBase.deserialize(value));
+    // A non-literal sibling supplies context; CONCAT's "any" arguments do not.
+    const typeLiterals =
+      this.bindValue &&
+      (variadicAny || args.every((arg) => arg instanceof ValueExpression));
+    return args.map((arg) =>
+      typeLiterals
+        ? this.escapeTypedLiteral(arg, options)
+        : arg.toSQL(this, options)
+    );
+  }
+
+  escapeSelectField(
+    field: ExpressionBase,
+    options?: ISequelizableOptions
+  ): string {
+    return this.escapeTypedLiteral(field, options);
+  }
+
+  escapeOperation(
+    fn: OperationExpression,
+    options?: ISequelizableOptions
+  ): string {
+    return `(${this.renderArguments(fn.value, options).join(
+      ` ${fn.operation} `
+    )})`;
+  }
+
   escapeFunction(
     fn: FunctionExpression,
     options?: ISequelizableOptions
   ): string {
     const renderArgs = () =>
-      fn.value.map((arg) =>
-        ExpressionBase.deserialize(arg).toSQL(this, options)
-      );
+      this.renderArguments(fn.value, options, fn.name === "CONCAT");
 
     if (fn.name === "DATEADD") {
       // Only interval operands are literals; the date may be a nested expression.
@@ -41,12 +100,13 @@ export class PostgresFlavor extends DefaultFlavor {
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
+      const date = ExpressionBase.deserialize(fn.value[0]).toSQL(this, options);
       if (this.bindValue) {
-        return `(${renderArgs()[0]} + CAST(${this.bindValue(
+        return `(${date} + CAST(${this.bindValue(
           `${interval} ${intervalType}`
         )} AS INTERVAL))`;
       }
-      return `(${renderArgs()[0]} + INTERVAL '${interval} ${intervalType}')`;
+      return `(${date} + INTERVAL '${interval} ${intervalType}')`;
     }
 
     if (fn.name === "YEAR") {
@@ -58,7 +118,14 @@ export class PostgresFlavor extends DefaultFlavor {
     }
 
     if (fn.name === "IF") {
-      const [condition, thenValue, elseValue] = renderArgs();
+      const condition = ExpressionBase.deserialize(fn.value[0]).toSQL(
+        this,
+        options
+      );
+      const [thenValue, elseValue] = this.renderArguments(
+        fn.value.slice(1),
+        options
+      );
       return `CASE WHEN ${condition} THEN ${thenValue} ELSE ${elseValue} END`;
     }
 
@@ -66,7 +133,7 @@ export class PostgresFlavor extends DefaultFlavor {
       return `COALESCE(${renderArgs().join(",")})`;
     }
 
-    return super.escapeFunction(fn, options);
+    return `${fn.name}(${renderArgs().join(",")})`;
   }
 
   escapeLikeCondition(

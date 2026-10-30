@@ -1,5 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { Cond, Fn, Q } from "./index";
+import { FunctionExpression } from "./Expression";
 import type {
   DeleteMutation,
   InsertMutation,
@@ -109,6 +110,133 @@ describePostgres("PostgreSQL inline and bound execution (#21)", () => {
   const ordinals = () =>
     Q.select().from("t").field("ordinal").orderBy("ordinal");
 
+  describe("literal typing boundaries", () => {
+    it.each([0, "0"])(
+      "infers COALESCE's numeric fallback %p from its column",
+      async (fallback) => {
+        await db.exec("UPDATE t SET amount = NULL WHERE ordinal = 1");
+        await expectEquivalent(
+          Q.select()
+            .from("t")
+            .field(Fn.ifnull("amount", Q.value(fallback)), "value")
+            .orderBy("ordinal"),
+          [{ value: "0" }, { value: "20.00" }, { value: "30.75" }],
+          'COALESCE("amount",$1)'
+        );
+      }
+    );
+
+    it("infers COALESCE's text fallback from its column", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(Fn.ifnull("col", Q.value("x")), "value")
+          .orderBy("ordinal"),
+        [{ value: "x" }, { value: "present" }, { value: "x" }],
+        'COALESCE("col",$1)'
+      );
+    });
+
+    it("infers CASE's literal branch from its text column branch", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(
+            Fn.if(Cond.equal("active", true), Q.value("a"), "col"),
+            "value"
+          )
+          .orderBy("ordinal"),
+        [{ value: "a" }, { value: "present" }, { value: "a" }],
+        'CASE WHEN "active" = $1 THEN $2 ELSE "col" END'
+      );
+    });
+
+    it("coerces CASE's string zero using its numeric column branch", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(
+            Fn.if(Cond.equal("active", true), Q.value("0"), "price"),
+            "value"
+          )
+          .orderBy("ordinal"),
+        [{ value: 0 }, { value: 20 }, { value: 0 }],
+        'CASE WHEN "active" = $1 THEN $2 ELSE "price" END'
+      );
+    });
+
+    it("coerces arithmetic's string operand using its column sibling", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(Fn.multiply("price", Q.value("2")), "value")
+          .orderBy("ordinal"),
+        [{ value: 20 }, { value: 40 }, { value: 60 }],
+        '("price" * $1)'
+      );
+    });
+
+    it("types LOWER's single literal argument", async () => {
+      await expectEquivalent(
+        Q.select().field(
+          new FunctionExpression("LOWER", Q.value("X")),
+          "value"
+        ),
+        [{ value: "x" }],
+        "LOWER(CAST($1 AS TEXT))"
+      );
+    });
+
+    it("types a nested SUM(CASE) independently of its outer operation", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(
+            Fn.add(
+              Fn.sum(Fn.if(Cond.equal("active", true), Q.value(1), Q.value(0))),
+              Q.value(1)
+            ),
+            "value"
+          ),
+        [{ value: 3 }],
+        '(SUM(CASE WHEN "active" = $1 THEN $2::integer ELSE $3::integer END) + $4)'
+      );
+    });
+
+    it("infers COALESCE's string fallback from a nested aggregate", async () => {
+      await expectEquivalent(
+        Q.select()
+          .from("t")
+          .field(Fn.ifnull(Fn.sum("price"), Q.value("0")), "value"),
+        [{ value: 60 }],
+        'COALESCE(SUM("price"),$1)'
+      );
+    });
+
+    it("types literal COALESCE siblings while leaving null untyped", async () => {
+      await expectEquivalent(
+        Q.select().field(Fn.ifnull(Q.value(null), Q.value(1)), "value"),
+        [{ value: 1 }],
+        "COALESCE($1,$2::integer)"
+      );
+    });
+
+    it.each([
+      { name: "integer", value: 1, expected: 1, cast: "::integer" },
+      { name: "boolean", value: true, expected: true, cast: "::boolean" },
+      { name: "fraction", value: 1.5, expected: "1.5", cast: "::numeric" },
+    ])(
+      "returns a bare $name field without FROM with PostgreSQL's JS type",
+      async ({ value, expected, cast }) => {
+        await expectEquivalent(
+          Q.select().field(Q.value(value), "value"),
+          [{ value: expected }],
+          `SELECT $1${cast} AS "value"`
+        );
+      }
+    );
+  });
+
   describe("function arguments, operations and SELECT fields", () => {
     // These are ordinary success assertions: unresolved bugs must leave CI red.
     it("executes CONCAT with a literal separator in a SELECT field", async () => {
@@ -200,16 +328,17 @@ describePostgres("PostgreSQL inline and bound execution (#21)", () => {
     });
 
     it.each([
-      { name: "integer", value: 1 },
-      { name: "fraction", value: 1.5 },
-      { name: "boolean", value: true },
-      { name: "string", value: "hello" },
+      { name: "integer", value: 1, expected: 1 },
+      // PostgreSQL numeric is decoded as a string by PGlite, including inline.
+      { name: "fraction", value: 1.5, expected: "1.5" },
+      { name: "boolean", value: true, expected: true },
+      { name: "string", value: "hello", expected: "hello" },
     ])(
       "executes a bare $name literal SELECT field with the same value type",
-      async ({ value }) => {
+      async ({ value, expected }) => {
         await expectEquivalent(
           Q.select().from("t").field(Q.value(value), "one").orderBy("ordinal"),
-          [{ one: value }, { one: value }, { one: value }]
+          [{ one: expected }, { one: expected }, { one: expected }]
         );
       }
     );

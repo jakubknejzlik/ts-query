@@ -59,7 +59,8 @@ const encodings = [
 type Render = (
   value: string,
   column: (name: string) => string,
-  source: (name: string) => string
+  source: (name: string) => string,
+  textLiteral: (value: string) => string
 ) => string;
 interface Position {
   name: string;
@@ -216,7 +217,8 @@ const positions: Position[] = [
   {
     name: "SELECT field and safe alias",
     input: (v) => ({ ...select(v), fields: [{ name: v, alias: "ok" }] }),
-    render: (v, c, t) => `SELECT ${v} AS ${c("ok")} FROM ${t("users")}`,
+    render: (v, c, t, text) =>
+      `SELECT ${text(v)} AS ${c("ok")} FROM ${t("users")}`,
     columns: [],
     reparses: true,
   },
@@ -224,25 +226,28 @@ const positions: Position[] = [
     {
       name: "function argument",
       wire: (v: string) => fn("COUNT", v),
-      sql: (v: string) => `COUNT(${v})`,
+      sql: (v: string, text: (v: string) => string) => `COUNT(${text(v)})`,
       functions: ["COUNT"],
     },
     {
       name: "operation argument",
       wire: (v: string) => op(v, v),
-      sql: (v: string) => `(${v} + ${v})`,
+      sql: (v: string, text: (v: string) => string) =>
+        `(${text(v)} + ${text(v)})`,
       functions: [],
     },
     {
       name: "nested function/operation argument",
       wire: (v: string) => fn("COUNT", op(fn("MAX", v), v)),
-      sql: (v: string) => `COUNT((MAX(${v}) + ${v}))`,
+      sql: (v: string, text: (v: string) => string) =>
+        `COUNT((MAX(${text(v)}) + ${v}))`,
       functions: ["COUNT", "MAX"],
     },
   ].map(({ name, wire, sql, functions }) => ({
     name,
     input: (v: string) => select(wire(v)),
-    render: (v: string, _c, t) => `SELECT ${sql(v)} FROM ${t("users")}`,
+    render: (v: string, _c, t, text) =>
+      `SELECT ${sql(v, text)} FROM ${t("users")}`,
     columns: [],
     functions,
     reparses: true,
@@ -285,10 +290,10 @@ const positions: Position[] = [
             },
           ],
         }),
-        render: (v: string, c, t) => {
+        render: (v: string, c, t, text) => {
           const subquery =
             slot === "field"
-              ? `SELECT ${v} FROM ${t("users")}`
+              ? `SELECT ${text(v)} FROM ${t("users")}`
               : `SELECT ${c("id")} FROM ${t("users")} WHERE ${
                   slot === "WHERE key" ? v : c("id")
                 } = ${slot === "WHERE value" ? v : "'FIXED'"}`;
@@ -361,10 +366,10 @@ const positions: Position[] = [
       ...select(),
       unionQueries: [{ type, query: select(v) }],
     }),
-    render: (v: string, c, t) =>
-      `(${`SELECT ${c("id")} FROM ${t(
-        "users"
-      )}`}) ${type} (SELECT ${v} FROM ${t("users")})`,
+    render: (v: string, c, t, text) =>
+      `(${`SELECT ${c("id")} FROM ${t("users")}`}) ${type} (SELECT ${text(
+        v
+      )} FROM ${t("users")})`,
     columns: ["id"],
     depth: 1,
     subqueries: [1],
@@ -381,8 +386,10 @@ const positions: Position[] = [
       ...select(),
       tables: [{ type: "Table", source: select(v), alias: "u" }],
     }),
-    render: (v, c, t) =>
-      `SELECT ${c("id")} FROM (SELECT ${v} FROM ${t("users")}) AS ${c("u")}`,
+    render: (v, c, t, text) =>
+      `SELECT ${c("id")} FROM (SELECT ${text(v)} FROM ${t("users")}) AS ${c(
+        "u"
+      )}`,
     columns: ["id"],
     depth: 1,
     subqueries: [1],
@@ -413,8 +420,10 @@ const positions: Position[] = [
       table: table(),
       select: [select(v), ["id"]],
     }),
-    render: (v, c, t) =>
-      `INSERT INTO ${c("users")} (${c("id")}) SELECT ${v} FROM ${t("users")}`,
+    render: (v, c, t, text) =>
+      `INSERT INTO ${c("users")} (${c("id")}) SELECT ${text(v)} FROM ${t(
+        "users"
+      )}`,
     columns: ["id"],
     kind: "insert",
     depth: 1,
@@ -447,8 +456,10 @@ const positions: Position[] = [
       values: { id: JSON.stringify(select(v)) },
       where: [],
     }),
-    render: (v, c, t) =>
-      `UPDATE ${c("users")} SET ${c("id")} = (SELECT ${v} FROM ${t("users")})`,
+    render: (v, c, t, text) =>
+      `UPDATE ${c("users")} SET ${c("id")} = (SELECT ${text(v)} FROM ${t(
+        "users"
+      )})`,
     columns: ["id"],
     kind: "update",
     depth: 1,
@@ -498,10 +509,10 @@ const positions: Position[] = [
       [type === "ctas" ? "tableName" : "viewName"]: "archive",
       select: select(v),
     }),
-    render: (v: string, c, t) =>
+    render: (v: string, c, t, text) =>
       `CREATE ${type === "ctas" ? "TABLE" : "VIEW"} ${c(
         "archive"
-      )} AS SELECT ${v} FROM ${t("users")}`,
+      )} AS SELECT ${text(v)} FROM ${t("users")}`,
     columns: [],
     kind: type,
     depth: 1,
@@ -580,7 +591,9 @@ function expectedRender(
   const column = (name: string) => flavor.escapeColumn(name);
   const source = (name: string) =>
     flavor.escapeTable(transformed ? `guard_${name}` : name);
-  const template = position.render(marker, column, source);
+  const textLiteral = (v: string) =>
+    bound && flavor === Q.flavors.postgres ? `CAST(${v} AS TEXT)` : v;
+  const template = position.render(marker, column, source, textLiteral);
   const sql = template.replace(/\u0001literal\u0001|'FIXED'/g, (token) => {
     const datum = token === "'FIXED'" ? "fixed" : value;
     bindings.push(datum);
