@@ -13,12 +13,16 @@ export interface ISQLFlavor {
   parameterPlaceholder?(index: number): string;
   /** Used by the binding renderer for flavor-specific literal syntax. */
   bindValue?(value: unknown): string;
+  /** Optional syntax for a bound literal outside explicitly typed positions. */
+  escapeBoundValue?(placeholder: string, value: unknown): string;
   /** @internal Report flavor-generated casts for binding parity verification. */
   onBindingCast?(placeholder: string, cast: string): void;
   escapeColumn(name: string, legacy?: boolean): string;
   escapeTable(table: string): string;
   escapeRawValue(value: ExpressionRawValue): string;
   escapeValue(value: ExpressionValue): string;
+  /** Format bound Dates with the same wall-clock representation as inline SQL. */
+  formatDateValue?(value: Date): string;
   /** Optional SELECT-field renderer; defaults to the field's own toSQL. */
   escapeSelectField?(
     field: ExpressionBase,

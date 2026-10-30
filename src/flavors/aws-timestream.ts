@@ -1,5 +1,4 @@
 import { ISequelizableOptions } from "../interfaces";
-import dayjs from "dayjs";
 import {
   ExpressionBase,
   ExpressionValue,
@@ -8,13 +7,25 @@ import {
 import { DefaultFlavor } from "./default";
 
 export class AWSTimestreamFlavor extends DefaultFlavor {
+  /** @internal Installed on the per-render flavor by the binding renderer. */
+  onBindingCast?: (placeholder: string, cast: string) => void;
+
+  escapeBoundValue(placeholder: string, value: unknown): string {
+    if (value instanceof Date) {
+      // Timestream conversion functions use cast(value AS type).
+      // https://docs.aws.amazon.com/timestream/latest/developerguide/conversion-functions.html
+      const sql = `CAST(${placeholder} AS TIMESTAMP)`;
+      this.onBindingCast?.(placeholder, sql);
+      return sql;
+    }
+    return placeholder;
+  }
+
   protected columnQuotes = `"`;
   protected stringQuotes = `'`;
   escapeValue(value: ExpressionValue): string {
     if (value instanceof Date) {
-      const formatted = dayjs(value)
-        .tz(this.options?.timezone)
-        .format("YYYY-MM-DD HH:mm:ss");
+      const formatted = this.formatDateValue(value);
       return `TIMESTAMP '${formatted}'`;
     }
     return super.escapeValue(value);

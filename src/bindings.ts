@@ -35,7 +35,11 @@ export function toSQLWithBindings(
   // Resolve tokens after rendering: flavors may reorder or repeat function arguments.
   const prefix = `\u0000tsq(${Math.random().toString(36).slice(2) || "0"}:`;
   const bind = (value: unknown): string => {
-    values.push(value);
+    values.push(
+      value instanceof Date && flavor.formatDateValue
+        ? flavor.formatDateValue(value)
+        : value
+    );
     return `${prefix}${values.length - 1})\u0000`;
   };
   const boundFlavor: ISQLFlavor = Object.create(flavor);
@@ -43,7 +47,10 @@ export function toSQLWithBindings(
   boundFlavor.onBindingCast = (placeholder, cast) =>
     casts.set(placeholder, cast);
   boundFlavor.bindValue = bind;
-  boundFlavor.escapeValue = (value: ExpressionValue) => bind(value);
+  boundFlavor.escapeValue = (value: ExpressionValue) => {
+    const placeholder = bind(value);
+    return boundFlavor.escapeBoundValue?.(placeholder, value) ?? placeholder;
+  };
   // Older builders use a raw NULL node for UPDATE nulls, empty IN and VALUES.
   boundFlavor.escapeRawValue = (value) =>
     value === "NULL"
@@ -52,8 +59,10 @@ export function toSQLWithBindings(
   boundFlavor.escapeLimitAndOffset = (limit, offset) =>
     flavor.escapeLimitAndOffset.call(
       boundFlavor,
-      limit === undefined ? undefined : (bind(limit) as any),
-      offset === undefined ? undefined : (bind(offset) as any)
+      limit === undefined ? undefined : (boundFlavor.escapeValue(limit) as any),
+      offset === undefined
+        ? undefined
+        : (boundFlavor.escapeValue(offset) as any)
     );
   const rendered = query.toSQL(boundFlavor, options);
   const bindings: unknown[] = [];

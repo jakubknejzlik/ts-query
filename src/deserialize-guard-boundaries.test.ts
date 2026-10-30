@@ -676,8 +676,11 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
       expect(query.serialize()).toBe(bytes);
     });
 
-    it("Date builder values and date wire encodings retain Date bindings and serialize bytes", () => {
+    it("Date builder values and date wire encodings retain Date string bindings and serialize bytes", () => {
       const date = new Date("2024-01-02T03:04:05.000Z");
+      const formattedDate = flavor.formatDateValue!(date);
+      const datePlaceholder = (sql: string) =>
+        dialect === "awsTimestream" ? `CAST(${sql} AS TIMESTAMP)` : sql;
       const wire = `!D!${date.valueOf()}!!`;
       const query = Q.select()
         .field(Q.value(date), "at")
@@ -692,15 +695,17 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
       expect(query.serialize()).toBe(bytes);
       for (const node of [query, Q.deserialize(bytes, guarded)]) {
         expect(assertAgreement(node)).toEqual({
-          sql: `SELECT ${placeholder(1)} AS ${column("at")} FROM ${column(
-            "users"
-          )} WHERE ${column("created_at")} = ${placeholder(2)}`,
-          bindings: [date, date],
+          sql: `SELECT ${datePlaceholder(textPlaceholder(1))} AS ${column(
+            "at"
+          )} FROM ${column("users")} WHERE ${column(
+            "created_at"
+          )} = ${datePlaceholder(placeholder(2))}`,
+          bindings: [formattedDate, formattedDate],
         });
         expect(
           node
             .toSQLWithBindings(flavor)
-            .bindings.every((value) => value instanceof Date)
+            .bindings.every((value) => typeof value === "string")
         ).toBe(true);
         expect(node.toSQL(flavor)).toBe(
           `SELECT ${flavor.escapeValue(date)} AS ${column("at")} FROM ${column(

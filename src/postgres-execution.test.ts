@@ -450,7 +450,7 @@ describePostgres("PostgreSQL inline and bound execution (#21)", () => {
       await expectEquivalent(
         ordinals().where(Cond.between("amount", [10.5, 20])),
         [{ ordinal: 1 }, { ordinal: 2 }],
-        '"amount" BETWEEN $1 AND $2'
+        '"amount" BETWEEN $1::numeric AND $2'
       );
     });
 
@@ -549,7 +549,7 @@ describePostgres("PostgreSQL inline and bound execution (#21)", () => {
       };
       const query = Q.insert("t").values([row]);
       expect(query.toSQLWithBindings(pg).sql).toContain(
-        "VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        "VALUES ($1, $2, $3, $4, $5::numeric, $6, $7)"
       );
       await expectMutationEquivalent(
         query,

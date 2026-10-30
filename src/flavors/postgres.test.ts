@@ -87,13 +87,15 @@ describe("PostgresFlavor", () => {
       {
         name: "Date (#22)",
         value: new Date("2024-01-01T00:00:00Z"),
-        sql: "$1",
+        sql: "CAST($1 AS TEXT)",
       },
     ])("renders a bare $name field with its agreed type", ({ value, sql }) => {
       const query = Q.select().field(Q.value(value), "value");
       expect(query.toSQLWithBindings(flavor)).toEqual({
         sql: `SELECT ${sql} AS "value" `,
-        bindings: [value],
+        bindings: [
+          value instanceof Date ? flavor.formatDateValue(value) : value,
+        ],
       });
       expect(query.toSQL(flavor)).toBe(
         `SELECT ${flavor.escapeValue(value)} AS "value" `

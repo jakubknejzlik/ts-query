@@ -16,6 +16,15 @@ export class PostgresFlavor extends DefaultFlavor {
     return `$${index}`;
   }
 
+  escapeBoundValue(placeholder: string, value: unknown): string {
+    if (typeof value === "number" && !Number.isInteger(value)) {
+      const sql = `${placeholder}::numeric`;
+      this.onBindingCast?.(placeholder, sql);
+      return sql;
+    }
+    return placeholder;
+  }
+
   protected columnQuotes = '"';
   protected stringQuotes = "'";
 
@@ -23,25 +32,35 @@ export class PostgresFlavor extends DefaultFlavor {
     expression: ExpressionBase,
     options?: ISequelizableOptions
   ): string {
-    const sql = expression.toSQL(this, options);
-    if (!this.bindValue || !(expression instanceof ValueExpression)) return sql;
-    const cast = (typedSQL: string) => {
-      this.onBindingCast?.(sql, typedSQL);
-      return typedSQL;
-    };
-    const value = expression.value;
-    if (typeof value === "string") return cast(`CAST(${sql} AS TEXT)`);
-    if (typeof value === "boolean") return cast(`${sql}::boolean`);
-    if (typeof value === "bigint") return cast(`${sql}::bigint`);
-    if (typeof value === "number") {
-      const type = Number.isInteger(value)
+    if (!this.bindValue || !(expression instanceof ValueExpression)) {
+      return expression.toSQL(this, options);
+    }
+    const value =
+      expression.value instanceof Date
+        ? this.formatDateValue(expression.value)
+        : expression.value;
+    let type: string;
+    if (typeof value === "string") type = "TEXT";
+    else if (typeof value === "boolean") type = "boolean";
+    else if (typeof value === "bigint") type = "bigint";
+    else if (typeof value === "number") {
+      type = Number.isInteger(value)
         ? value >= -2147483648 && value <= 2147483647
           ? "integer"
           : "bigint"
         : "numeric";
-      return cast(`${sql}::${type}`);
+    } else {
+      // Leave null and nested expressions to their context.
+      return expression.toSQL(this, options);
     }
-    // Leave null and Date parameters to their context (Date handling is #22).
+    // Bind explicitly typed literals directly so the general hook cannot add
+    // another cast around the same placeholder.
+    const placeholder = this.bindValue(value);
+    const sql =
+      type === "TEXT"
+        ? `CAST(${placeholder} AS TEXT)`
+        : `${placeholder}::${type}`;
+    this.onBindingCast?.(placeholder, sql);
     return sql;
   }
 
@@ -113,9 +132,10 @@ export class PostgresFlavor extends DefaultFlavor {
       }
       const date = ExpressionBase.deserialize(fn.value[0]).toSQL(this, options);
       if (this.bindValue) {
-        return `(${date} + CAST(${this.bindValue(
-          `${interval} ${intervalType}`
-        )} AS INTERVAL))`;
+        const placeholder = this.bindValue(`${interval} ${intervalType}`);
+        const sql = `CAST(${placeholder} AS INTERVAL)`;
+        this.onBindingCast?.(placeholder, sql);
+        return `(${date} + ${sql})`;
       }
       return `(${date} + INTERVAL '${interval} ${intervalType}')`;
     }

@@ -104,14 +104,18 @@ export class DefaultFlavor implements ISQLFlavor {
     return `${value}`;
   }
 
+  formatDateValue(value: Date): string {
+    return dayjs(value)
+      .tz(this.options?.timezone)
+      .format("YYYY-MM-DD HH:mm:ss");
+  }
+
   escapeValue(value: ExpressionValue): string {
     if (value === null) {
       return "NULL";
     }
     if (value instanceof Date) {
-      return this.escapeValue(
-        dayjs(value).tz(this.options?.timezone).format("YYYY-MM-DD HH:mm:ss")
-      );
+      return this.escapeValue(this.formatDateValue(value));
     }
     if (typeof value === "string") {
       return `${this.stringQuotes}${value.replace(
