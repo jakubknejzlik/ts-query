@@ -8,6 +8,7 @@ import {
   toSQLWithBindings,
   SQLWithBindings,
   getGeneratedBindingCasts,
+  getBindingDateSources,
 } from "./bindings";
 import { ISQLFlavor } from "./Flavor";
 
@@ -17,6 +18,7 @@ export function inlineBindings(
   flavor: ISQLFlavor
 ): string {
   let index = 0;
+  const dates = getBindingDateSources(result);
   let sql = result.sql;
   // Work backwards so removing a cast cannot shift later recorded locations.
   // Authored casts and casts inserted outside the flavor's typing path survive.
@@ -35,7 +37,19 @@ export function inlineBindings(
         if (token[0] !== "?" && token[0] !== "$") return token;
         const position =
           token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
-        return flavor.escapeValue(result.bindings[position] as any);
+        const escaped = flavor.escapeValue(result.bindings[position] as any);
+        const date = dates.get(position);
+        if (date && flavor.formatDateValue) {
+          // Preserve wrappers such as Timestream's TIMESTAMP prefix, while
+          // checking the actual string binding rather than reformatting a Date.
+          return flavor
+            .escapeValue(date)
+            .replace(
+              flavor.escapeValue(flavor.formatDateValue(date)),
+              () => escaped
+            );
+        }
+        return escaped;
       }
     )
     .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1");

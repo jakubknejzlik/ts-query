@@ -5,8 +5,14 @@ import {
   toSQLWithBindings,
   SQLWithBindings,
   ISQLFlavor,
+  DefaultFlavor,
+  MySQLFlavor,
+  PostgresFlavor,
+  SQLiteFlavor,
+  AWSTimestreamFlavor,
 } from "./index";
 import { inlineBindings, getBindingComparisons } from "./test-bindings";
+import { getGeneratedBindingCasts } from "./bindings";
 
 describe("Parameterized SQL", () => {
   it.each([
@@ -63,6 +69,7 @@ describe("Parameterized SQL", () => {
     (name) => {
       const flavor = Q.flavors[name];
       const date = new Date("2025-01-02T03:04:05Z");
+      const formattedDate = flavor.formatDateValue(date);
       const insert = Q.insert("users").values([
         { id: 1, name: "a'b", created: date, deleted: null },
         { id: 2, name: "?", created: date, deleted: null },
@@ -70,11 +77,11 @@ describe("Parameterized SQL", () => {
       expect(insert.toSQLWithBindings(flavor).bindings).toEqual([
         1,
         "a'b",
-        date,
+        formattedDate,
         null,
         2,
         "?",
-        date,
+        formattedDate,
         null,
       ]);
       const update = Q.update("users")
@@ -221,6 +228,158 @@ describe("Parameterized SQL", () => {
       sql: "SELECT * FROM `users`",
       bindings: [],
     });
+  });
+
+  describe.each(["postgres", "mysql"] as const)(
+    "%s bound numbers",
+    (dialect) => {
+      it.each([
+        { value: 10.5, cast: "::numeric" },
+        { value: -0.5, cast: "::numeric" },
+        { value: 1e-3, cast: "::numeric" },
+        { value: 2, cast: "" },
+      ])(
+        "renders $value in WHERE, BETWEEN, IN, SET and VALUES",
+        ({ value, cast }) => {
+          const flavor = Q.flavors[dialect];
+          const column = dialect === "postgres" ? '"amount"' : "`amount`";
+          const table = dialect === "postgres" ? '"t"' : "`t`";
+          const first = dialect === "postgres" ? `$1${cast}` : "?";
+          const second = dialect === "postgres" ? `$2${cast}` : "?";
+          const integer = dialect === "postgres" ? "$2" : "?";
+          const cases = [
+            {
+              query: Q.select()
+                .from("t")
+                .where(Cond.greaterThan("amount", value)),
+              sql: `SELECT * FROM ${table} WHERE ${column} > ${first}`,
+              bindings: [value],
+            },
+            {
+              query: Q.select()
+                .from("t")
+                .where(Cond.between("amount", [value, value])),
+              sql: `SELECT * FROM ${table} WHERE ${column} BETWEEN ${first} AND ${second}`,
+              bindings: [value, value],
+            },
+            {
+              query: Q.select()
+                .from("t")
+                .where(Cond.in("amount", [value, 2])),
+              sql: `SELECT * FROM ${table} WHERE ${column} IN (${first}, ${integer})`,
+              bindings: [value, 2],
+            },
+            {
+              query: Q.update("t").set({ amount: value }),
+              sql: `UPDATE ${table} SET ${column} = ${first}`,
+              bindings: [value],
+            },
+            {
+              query: Q.insert("t").values([{ amount: value }]),
+              sql: `INSERT INTO ${table} (${column}) VALUES (${first})`,
+              bindings: [value],
+            },
+          ];
+          for (const { query, sql, bindings } of cases) {
+            const result = query.toSQLWithBindings(flavor);
+            expect(result).toEqual({ sql, bindings });
+            expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+          }
+        }
+      );
+    }
+  );
+
+  it("records exact numeric cast locations without duplicating typed literal casts", () => {
+    const flavor = Q.flavors.postgres;
+    const query = Q.select()
+      .field(Q.raw("42::numeric"))
+      .field(Q.value(1.5))
+      .field(Fn.multiply(Q.value(2.5), Q.value(3)))
+      .where(Cond.in("amount", [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]));
+    const result = query.toSQLWithBindings(flavor);
+    const casts = getGeneratedBindingCasts(result);
+    expect(casts.map(({ sql }) => sql)).toEqual([
+      "$1::numeric",
+      "$2::numeric",
+      "$3::integer",
+      "$4::numeric",
+      "$5::numeric",
+      "$6::numeric",
+      "$7::numeric",
+      "$8::numeric",
+      "$9::numeric",
+      "$10::numeric",
+      "$11::numeric",
+    ]);
+    for (const cast of casts) {
+      expect(result.sql.slice(cast.start, cast.start + cast.sql.length)).toBe(
+        cast.sql
+      );
+      expect(cast.sql).toContain(cast.placeholder);
+    }
+    expect(result.sql).not.toContain("::numeric::numeric");
+    expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+    expect(inlineBindings(result, flavor)).toContain("42::numeric");
+  });
+
+  describe.each([
+    ["default", DefaultFlavor],
+    ["mysql", MySQLFlavor],
+    ["postgres", PostgresFlavor],
+    ["sqlite", SQLiteFlavor],
+    ["awsTimestream", AWSTimestreamFlavor],
+  ] as const)("%s bound Dates", (_name, Flavor) => {
+    it.each([
+      ["2024-01-01T23:30:00Z", "2024-01-02 00:30:00"],
+      ["2024-07-01T23:30:00Z", "2024-07-02 01:30:00"],
+    ])("formats %s using the flavor timezone", (instant, formatted) => {
+      const flavor = new Flavor({ timezone: "Europe/Prague" });
+      const date = new Date(instant);
+      const queries = [
+        Q.select().where(Cond.equal("created_at", date)),
+        Q.select().field(Q.value(date)),
+        Q.select().field(Fn.concat(Q.value(date))),
+        Q.update("t").set({ created_at: date }),
+        Q.insert("t").values([{ created_at: date }]),
+      ];
+      for (const query of queries) {
+        const result = query.toSQLWithBindings(flavor);
+        expect(result.bindings).toEqual([formatted]);
+        expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+      }
+      if (flavor instanceof PostgresFlavor) {
+        expect(queries[0].toSQLWithBindings(flavor).sql).toBe(
+          'SELECT *  WHERE "created_at" = $1'
+        );
+        expect(queries[1].toSQLWithBindings(flavor).sql).toBe(
+          "SELECT CAST($1 AS TEXT) "
+        );
+        expect(queries[2].toSQLWithBindings(flavor).sql).toBe(
+          "SELECT CONCAT(CAST($1 AS TEXT)) "
+        );
+      }
+    });
+  });
+
+  it("reconstructs Date wrappers separately from identical string bindings and checks the actual values", () => {
+    const flavor = new AWSTimestreamFlavor({ timezone: "Europe/Prague" });
+    const query = Q.select()
+      .field(Q.value(new Date("2024-01-01T23:30:00Z")))
+      .field(Q.value("2024-01-02 00:30:00"));
+    const result = query.toSQLWithBindings(flavor);
+    expect(result.bindings).toEqual([
+      "2024-01-02 00:30:00",
+      "2024-01-02 00:30:00",
+    ]);
+    expect(inlineBindings(result, flavor)).toBe(
+      "SELECT TIMESTAMP '2024-01-02 00:30:00', '2024-01-02 00:30:00' "
+    );
+    result.bindings[0] = "2024-01-01 23:30:00";
+    expect(inlineBindings(result, flavor)).toBe(
+      "SELECT TIMESTAMP '2024-01-01 23:30:00', '2024-01-02 00:30:00' "
+    );
+    expect(inlineBindings(result, flavor)).not.toBe(query.toSQL(flavor));
   });
 
   it("reconstructs inline SQL for every successful rendering in the existing test corpus", () => {
