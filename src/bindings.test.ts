@@ -418,7 +418,7 @@ describe("Parameterized SQL", () => {
     });
   });
 
-  it("reconstructs Date wrappers separately from identical string bindings and checks the actual values", () => {
+  it("preserves Timestream Date typing in public SQL beside an identical string binding", () => {
     const flavor = new AWSTimestreamFlavor({ timezone: "Europe/Prague" });
     const query = Q.select()
       .field(Q.value(new Date("2024-01-01T23:30:00Z")))
@@ -428,15 +428,48 @@ describe("Parameterized SQL", () => {
       "2024-01-02 00:30:00",
       "2024-01-02 00:30:00",
     ]);
+    expect(result.sql).toBe("SELECT CAST(? AS TIMESTAMP), ? ");
+    expect(getGeneratedBindingCasts(result)).toEqual([
+      { start: 7, sql: "CAST(? AS TIMESTAMP)", placeholder: "?" },
+    ]);
     expect(inlineBindings(result, flavor)).toBe(
       "SELECT TIMESTAMP '2024-01-02 00:30:00', '2024-01-02 00:30:00' "
     );
+    // Copying only the public result must retain all timestamp semantics.
+    const publicResult = { sql: result.sql, bindings: [...result.bindings] };
+    expect(inlineBindings(publicResult, flavor)).toBe(query.toSQL(flavor));
+    publicResult.sql = "SELECT ?, ? ";
+    expect(inlineBindings(publicResult, flavor)).not.toBe(query.toSQL(flavor));
     result.bindings[0] = "2024-01-01 23:30:00";
     expect(inlineBindings(result, flavor)).toBe(
       "SELECT TIMESTAMP '2024-01-01 23:30:00', '2024-01-02 00:30:00' "
     );
     expect(inlineBindings(result, flavor)).not.toBe(query.toSQL(flavor));
   });
+
+  it.each([
+    ["default", DefaultFlavor],
+    ["mysql", MySQLFlavor],
+    ["postgres", PostgresFlavor],
+    ["sqlite", SQLiteFlavor],
+    ["awsTimestream", AWSTimestreamFlavor],
+  ] as const)(
+    "rejects a raw Date replacing a formatted %s binding in parity checks",
+    (_name, Flavor) => {
+      const flavor = new Flavor({ timezone: "Europe/Prague" });
+      const date = new Date("2024-01-01T23:30:00Z");
+      const query = Q.select().field(Q.value(date));
+      const result = query.toSQLWithBindings(flavor);
+      expect(result.bindings).toEqual(["2024-01-02 00:30:00"]);
+      expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+      // A driver can serialize a raw Date differently; escaping it here would
+      // format it again and hide a regression in the public binding value.
+      result.bindings[0] = date;
+      expect(() => inlineBindings(result, flavor)).toThrow(
+        "Date bindings must be formatted strings"
+      );
+    }
+  );
 
   it("reconstructs inline SQL for every successful rendering in the existing test corpus", () => {
     // The Jest setup installs the same inlineBindings assertion around all SQL

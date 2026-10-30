@@ -8,7 +8,6 @@ import {
   toSQLWithBindings,
   SQLWithBindings,
   getGeneratedBindingCasts,
-  getBindingDateSources,
 } from "./bindings";
 import { ISQLFlavor } from "./Flavor";
 
@@ -18,11 +17,13 @@ export function inlineBindings(
   flavor: ISQLFlavor
 ): string {
   let index = 0;
-  const dates = getBindingDateSources(result);
   let sql = result.sql;
   // Work backwards so removing a cast cannot shift later recorded locations.
   // Authored casts and casts inserted outside the flavor's typing path survive.
   for (const cast of [...getGeneratedBindingCasts(result)].reverse()) {
+    // Timestream's timestamp cast carries the Date's public SQL type. Keep it
+    // for the literal-only textual normalization below instead of erasing it.
+    if (cast.sql === `CAST(${cast.placeholder} AS TIMESTAMP)`) continue;
     if (sql.slice(cast.start, cast.start + cast.sql.length) !== cast.sql)
       continue;
     sql =
@@ -30,29 +31,27 @@ export function inlineBindings(
       cast.placeholder +
       sql.slice(cast.start + cast.sql.length);
   }
-  return sql
-    .replace(
-      /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
-      (token) => {
-        if (token[0] !== "?" && token[0] !== "$") return token;
-        const position =
-          token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
-        const escaped = flavor.escapeValue(result.bindings[position] as any);
-        const date = dates.get(position);
-        if (date && flavor.formatDateValue) {
-          // Preserve wrappers such as Timestream's TIMESTAMP prefix, while
-          // checking the actual string binding rather than reformatting a Date.
-          return flavor
-            .escapeValue(date)
-            .replace(
-              flavor.escapeValue(flavor.formatDateValue(date)),
-              () => escaped
-            );
+  return (
+    sql
+      .replace(
+        /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
+        (token) => {
+          if (token[0] !== "?" && token[0] !== "$") return token;
+          const position =
+            token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
+          const value = result.bindings[position];
+          if (value instanceof Date && flavor.formatDateValue) {
+            // Reformatting a raw Date here would hide a binding regression.
+            throw new Error("Date bindings must be formatted strings");
+          }
+          return flavor.escapeValue(value as any);
         }
-        return escaped;
-      }
-    )
-    .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1");
+      )
+      .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1")
+      // Timestream's varchar-to-timestamp cast and inline TIMESTAMP literal are
+      // equivalent; normalize only their SQL text, without original Date values.
+      .replace(/CAST\(('(?:''|[^'])*') AS TIMESTAMP\)/g, "TIMESTAMP $1")
+  );
 }
 
 // Every successful outermost toSQL call in the entire test corpus also asserts
