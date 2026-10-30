@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/jakubknejzlik/ts-query#readme",
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.13",
     "@storybook/addon-essentials": "^7.6.8",
     "@storybook/addon-interactions": "^7.6.8",
     "@storybook/addon-links": "^7.6.8",
