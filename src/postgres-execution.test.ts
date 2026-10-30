@@ -251,6 +251,21 @@ describePostgres("PostgreSQL inline and bound execution (#21)", () => {
       ]);
     });
 
+    it("executes lowercase concat with a literal argument", async () => {
+      const query = Q.select()
+        .from("t")
+        .field(new FunctionExpression("concat", "col", Q.value("x")), "value")
+        .orderBy("ordinal");
+      expect(query.toSQLWithBindings(Q.flavors.postgres).sql).toBe(
+        'SELECT concat("col",CAST($1 AS TEXT)) AS "value" FROM "t" ORDER BY "ordinal" ASC'
+      );
+      await expectEquivalent(query, [
+        { value: "x" },
+        { value: "presentx" },
+        { value: "x" },
+      ]);
+    });
+
     it("executes SUM of numeric CASE branches with GROUP BY", async () => {
       const query = Q.select()
         .from("t")

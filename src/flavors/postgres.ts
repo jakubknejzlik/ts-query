@@ -76,7 +76,11 @@ export class PostgresFlavor extends DefaultFlavor {
     options?: ISequelizableOptions
   ): string {
     const renderArgs = () =>
-      this.renderArguments(fn.value, options, fn.name === "CONCAT");
+      this.renderArguments(
+        fn.value,
+        options,
+        fn.name.toUpperCase() === "CONCAT"
+      );
 
     if (fn.name === "DATEADD") {
       // Only interval operands are literals; the date may be a nested expression.
