@@ -136,6 +136,32 @@ describe("PostgresFlavor", () => {
       );
     });
 
+    it("keeps an authored CAST($1 AS TEXT) beside a generated cast", () => {
+      const result = Q.select()
+        .field(Q.value("x"))
+        .field(Q.raw("CAST($1 AS TEXT)"))
+        .field(Q.raw("$1::integer"))
+        .toSQLWithBindings(flavor);
+      expect(inlineBindings(result, flavor)).toBe(
+        "SELECT 'x', CAST('x' AS TEXT), 'x'::integer "
+      );
+    });
+
+    it("rejects a generated cast in a condition slot", () => {
+      const condition = Cond.equal("n", 2);
+      const original = condition.toSQL;
+      // Simulate a renderer regression while retaining a valid SELECT cast.
+      condition.toSQL = function (flavor, options) {
+        const sql = original.call(this, flavor, options);
+        return flavor.bindValue ? `${sql}::integer` : sql;
+      };
+      const query = Q.select().field(Q.value(1)).from("t").where(condition);
+      expect(query.toSQLWithBindings(flavor).sql).toBe(
+        'SELECT $1::integer FROM "t" WHERE "n" = $2::integer'
+      );
+      expect(() => query.toSQL(flavor)).toThrow();
+    });
+
     it.each(["mysql", "sqlite", "awsTimestream"] as const)(
       "preserves %s inline and bound output byte for byte",
       (name) => {

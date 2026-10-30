@@ -9,6 +9,9 @@ import {
 import { DefaultFlavor } from "./default";
 
 export class PostgresFlavor extends DefaultFlavor {
+  /** @internal Installed on the per-render flavor by the binding renderer. */
+  onBindingCast?: (placeholder: string, cast: string) => void;
+
   parameterPlaceholder(index: number): string {
     return `$${index}`;
   }
@@ -22,17 +25,21 @@ export class PostgresFlavor extends DefaultFlavor {
   ): string {
     const sql = expression.toSQL(this, options);
     if (!this.bindValue || !(expression instanceof ValueExpression)) return sql;
+    const cast = (typedSQL: string) => {
+      this.onBindingCast?.(sql, typedSQL);
+      return typedSQL;
+    };
     const value = expression.value;
-    if (typeof value === "string") return `CAST(${sql} AS TEXT)`;
-    if (typeof value === "boolean") return `${sql}::boolean`;
-    if (typeof value === "bigint") return `${sql}::bigint`;
+    if (typeof value === "string") return cast(`CAST(${sql} AS TEXT)`);
+    if (typeof value === "boolean") return cast(`${sql}::boolean`);
+    if (typeof value === "bigint") return cast(`${sql}::bigint`);
     if (typeof value === "number") {
       const type = Number.isInteger(value)
         ? value >= -2147483648 && value <= 2147483647
           ? "integer"
           : "bigint"
         : "numeric";
-      return `${sql}::${type}`;
+      return cast(`${sql}::${type}`);
     }
     // Leave null and Date parameters to their context (Date handling is #22).
     return sql;
