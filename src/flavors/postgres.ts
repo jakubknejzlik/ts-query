@@ -35,7 +35,10 @@ export class PostgresFlavor extends DefaultFlavor {
     if (!this.bindValue || !(expression instanceof ValueExpression)) {
       return expression.toSQL(this, options);
     }
-    const value = expression.value;
+    const value =
+      expression.value instanceof Date
+        ? this.formatDateValue(expression.value)
+        : expression.value;
     let type: string;
     if (typeof value === "string") type = "TEXT";
     else if (typeof value === "boolean") type = "boolean";
@@ -47,7 +50,7 @@ export class PostgresFlavor extends DefaultFlavor {
           : "bigint"
         : "numeric";
     } else {
-      // Leave null and Date parameters to their context (Date handling is #22).
+      // Leave null and nested expressions to their context.
       return expression.toSQL(this, options);
     }
     // Bind explicitly typed literals directly so the general hook cannot add

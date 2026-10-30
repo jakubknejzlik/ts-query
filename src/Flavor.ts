@@ -21,6 +21,8 @@ export interface ISQLFlavor {
   escapeTable(table: string): string;
   escapeRawValue(value: ExpressionRawValue): string;
   escapeValue(value: ExpressionValue): string;
+  /** Format bound Dates with the same wall-clock representation as inline SQL. */
+  formatDateValue?(value: Date): string;
   /** Optional SELECT-field renderer; defaults to the field's own toSQL. */
   escapeSelectField?(
     field: ExpressionBase,

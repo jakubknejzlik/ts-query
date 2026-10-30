@@ -1,5 +1,4 @@
 import { ISequelizableOptions } from "../interfaces";
-import dayjs from "dayjs";
 import {
   ExpressionBase,
   ExpressionValue,
@@ -12,9 +11,7 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
   protected stringQuotes = `'`;
   escapeValue(value: ExpressionValue): string {
     if (value instanceof Date) {
-      const formatted = dayjs(value)
-        .tz(this.options?.timezone)
-        .format("YYYY-MM-DD HH:mm:ss");
+      const formatted = this.formatDateValue(value);
       return `TIMESTAMP '${formatted}'`;
     }
     return super.escapeValue(value);
