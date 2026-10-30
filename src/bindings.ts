@@ -69,8 +69,10 @@ export function toSQLWithBindings(
   boundFlavor.escapeLimitAndOffset = (limit, offset) =>
     flavor.escapeLimitAndOffset.call(
       boundFlavor,
-      limit === undefined ? undefined : (bind(limit) as any),
-      offset === undefined ? undefined : (bind(offset) as any)
+      limit === undefined ? undefined : (boundFlavor.escapeValue(limit) as any),
+      offset === undefined
+        ? undefined
+        : (boundFlavor.escapeValue(offset) as any)
     );
   const rendered = query.toSQL(boundFlavor, options);
   const bindings: unknown[] = [];

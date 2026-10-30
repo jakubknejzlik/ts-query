@@ -123,6 +123,10 @@ describePostgres("PostgreSQL inline and bound execution (#25, #22)", () => {
   const ordinals = () =>
     Q.select().from("t").field("ordinal").orderBy("ordinal");
 
+  it("rounds fractional LIMIT 1.5 and OFFSET 0.5 identically inline and bound", async () => {
+    await expectEquivalent(ordinals().limit(1.5).offset(0.5), lastTwo);
+  });
+
   const grouped = (column: string, threshold: number) =>
     Q.select()
       .from("t")

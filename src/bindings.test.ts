@@ -191,6 +191,62 @@ describe("Parameterized SQL", () => {
     });
   });
 
+  it.each([
+    ["default", DefaultFlavor],
+    ["mysql", MySQLFlavor],
+    ["postgres", PostgresFlavor],
+    ["sqlite", SQLiteFlavor],
+    ["awsTimestream", AWSTimestreamFlavor],
+  ] as const)(
+    "types only PostgreSQL fractional LIMIT/OFFSET for %s",
+    (name, Flavor) => {
+      const flavor = new Flavor();
+      for (const [limit, offset] of [
+        [1.5, 0.5],
+        [2, 1],
+        [1.5, 1],
+        [2, 0.5],
+      ]) {
+        const query = Q.select()
+          .field("id")
+          .from("t")
+          .limit(limit)
+          .offset(offset);
+        const result = query.toSQLWithBindings(flavor);
+        const quote =
+          name === "postgres" || name === "awsTimestream" ? '"' : "`";
+        const pagination =
+          name === "postgres"
+            ? `LIMIT $1${Number.isInteger(limit) ? "" : "::numeric"} OFFSET $2${
+                Number.isInteger(offset) ? "" : "::numeric"
+              }`
+            : name === "awsTimestream"
+            ? "OFFSET ? LIMIT ?"
+            : "LIMIT ? OFFSET ?";
+        expect(result).toEqual({
+          sql: `SELECT ${quote}id${quote} FROM ${quote}t${quote} ${pagination}`,
+          bindings:
+            name === "awsTimestream" ? [offset, limit] : [limit, offset],
+        });
+        const casts = getGeneratedBindingCasts(result);
+        expect(casts.map(({ sql }) => sql)).toEqual(
+          name === "postgres"
+            ? [
+                !Number.isInteger(limit) && "$1::numeric",
+                !Number.isInteger(offset) && "$2::numeric",
+              ].filter(Boolean)
+            : []
+        );
+        for (const cast of casts) {
+          expect(
+            result.sql.slice(cast.start, cast.start + cast.sql.length)
+          ).toBe(cast.sql);
+        }
+        expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+      }
+    }
+  );
+
   it("keeps raw SQL explicit and binds actual null literals", () => {
     expect(
       Q.select()
