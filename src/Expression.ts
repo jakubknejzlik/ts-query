@@ -44,13 +44,9 @@ export class ExpressionBase implements ISerializable, ISequelizable {
     if (value instanceof RawExpression) {
       return value;
     }
-    if (
-      valueIsString ||
-      (value instanceof Expression && typeof value.value === "string")
-    ) {
-      const condition = Condition.deserialize(
-        value instanceof Expression ? value.value : value
-      );
+    // Only untyped strings may encode conditions; typed literal contents are data.
+    if (valueIsString) {
+      const condition = Condition.deserialize(value);
       if (condition !== null) {
         return condition;
       }
