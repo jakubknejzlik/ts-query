@@ -132,9 +132,10 @@ export class PostgresFlavor extends DefaultFlavor {
       }
       const date = ExpressionBase.deserialize(fn.value[0]).toSQL(this, options);
       if (this.bindValue) {
-        return `(${date} + CAST(${this.bindValue(
-          `${interval} ${intervalType}`
-        )} AS INTERVAL))`;
+        const placeholder = this.bindValue(`${interval} ${intervalType}`);
+        const sql = `CAST(${placeholder} AS INTERVAL)`;
+        this.onBindingCast?.(placeholder, sql);
+        return `(${date} + ${sql})`;
       }
       return `(${date} + INTERVAL '${interval} ${intervalType}')`;
     }

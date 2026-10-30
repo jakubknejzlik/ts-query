@@ -17,41 +17,51 @@ export function inlineBindings(
   flavor: ISQLFlavor
 ): string {
   let index = 0;
-  let sql = result.sql;
-  // Work backwards so removing a cast cannot shift later recorded locations.
-  // Authored casts and casts inserted outside the flavor's typing path survive.
-  for (const cast of [...getGeneratedBindingCasts(result)].reverse()) {
-    // Timestream's timestamp cast carries the Date's public SQL type. Keep it
-    // for the literal-only textual normalization below instead of erasing it.
-    if (cast.sql === `CAST(${cast.placeholder} AS TIMESTAMP)`) continue;
-    if (sql.slice(cast.start, cast.start + cast.sql.length) !== cast.sql)
-      continue;
-    sql =
-      sql.slice(0, cast.start) +
-      cast.placeholder +
-      sql.slice(cast.start + cast.sql.length);
-  }
-  return (
-    sql
-      .replace(
-        /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
-        (token) => {
-          if (token[0] !== "?" && token[0] !== "$") return token;
-          const position =
-            token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
-          const value = result.bindings[position];
-          if (value instanceof Date && flavor.formatDateValue) {
-            // Reformatting a raw Date here would hide a binding regression.
-            throw new Error("Date bindings must be formatted strings");
-          }
-          return flavor.escapeValue(value as any);
-        }
-      )
-      .replace(/CAST\(('(?:''|[^'])*') AS INTERVAL\)/g, "INTERVAL $1")
-      // Timestream's varchar-to-timestamp cast and inline TIMESTAMP literal are
-      // equivalent; normalize only their SQL text, without original Date values.
-      .replace(/CAST\(('(?:''|[^'])*') AS TIMESTAMP\)/g, "TIMESTAMP $1")
+  let cursor = 0;
+  let sql = "";
+  const usedBindings = new Set<number>();
+  const casts = new Map(
+    getGeneratedBindingCasts(result).map(
+      (cast) => [cast.start + cast.sql.indexOf(cast.placeholder), cast] as const
+    )
   );
+  const tokens = /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g;
+  let match: RegExpExecArray | null;
+  while ((match = tokens.exec(result.sql))) {
+    const token = match[0];
+    if (token[0] !== "?" && token[0] !== "$") continue;
+    const position = token[0] === "$" ? Number(token.slice(1)) - 1 : index++;
+    if (position < 0 || position >= result.bindings.length)
+      throw new Error(`Missing SQL binding for ${token}`);
+    usedBindings.add(position);
+    const value = result.bindings[position];
+    if (value instanceof Date && flavor.formatDateValue) {
+      // Reformatting a raw Date here would hide a binding regression.
+      throw new Error("Date bindings must be formatted strings");
+    }
+    let literal = flavor.escapeValue(value as any);
+    let start = match.index;
+    let end = start + token.length;
+    const cast = casts.get(start);
+    // Only the flavor's recorded cast around this unquoted placeholder may
+    // change. Authored casts and quoted data survive without normalization.
+    if (
+      cast?.placeholder === token &&
+      result.sql.slice(cast.start, cast.start + cast.sql.length) === cast.sql
+    ) {
+      start = cast.start;
+      end = start + cast.sql.length;
+      const type = ["TIMESTAMP", "INTERVAL"].find(
+        (type) => cast.sql === `CAST(${token} AS ${type})`
+      );
+      if (type) literal = `${type} ${literal}`;
+    }
+    sql += result.sql.slice(cursor, start) + literal;
+    cursor = end;
+  }
+  if (usedBindings.size !== result.bindings.length)
+    throw new Error("Unused SQL bindings");
+  return sql + result.sql.slice(cursor);
 }
 
 // Every successful outermost toSQL call in the entire test corpus also asserts

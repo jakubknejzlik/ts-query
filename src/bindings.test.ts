@@ -435,9 +435,12 @@ describe("Parameterized SQL", () => {
     expect(inlineBindings(result, flavor)).toBe(
       "SELECT TIMESTAMP '2024-01-02 00:30:00', '2024-01-02 00:30:00' "
     );
-    // Copying only the public result must retain all timestamp semantics.
+    // Public SQL retains its timestamp type; unregistered casts stay verbatim
+    // when the parity harness substitutes their placeholders.
     const publicResult = { sql: result.sql, bindings: [...result.bindings] };
-    expect(inlineBindings(publicResult, flavor)).toBe(query.toSQL(flavor));
+    expect(inlineBindings(publicResult, flavor)).toBe(
+      "SELECT CAST('2024-01-02 00:30:00' AS TIMESTAMP), '2024-01-02 00:30:00' "
+    );
     publicResult.sql = "SELECT ?, ? ";
     expect(inlineBindings(publicResult, flavor)).not.toBe(query.toSQL(flavor));
     result.bindings[0] = "2024-01-01 23:30:00";
@@ -445,6 +448,114 @@ describe("Parameterized SQL", () => {
       "SELECT TIMESTAMP '2024-01-01 23:30:00', '2024-01-02 00:30:00' "
     );
     expect(inlineBindings(result, flavor)).not.toBe(query.toSQL(flavor));
+  });
+
+  describe.each([
+    ["TIMESTAMP", "2024-01-02 00:30:00"],
+    ["INTERVAL", "1 day"],
+  ])("%s cast parity", (type, value) => {
+    const cast = `CAST('${value}' AS ${type})`;
+
+    it("preserves authored PostgreSQL literal casts without bindings", () => {
+      const flavor = Q.flavors.postgres;
+      const query = Q.select().field(Q.raw(cast));
+      const result = query.toSQLWithBindings(flavor);
+      expect(result).toEqual({ sql: `SELECT ${cast} `, bindings: [] });
+      expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+    });
+
+    it("rejects an authored cast with a stray extra binding in the real harness", () => {
+      const flavor = Q.flavors.postgres;
+      const query = Q.select().field(Q.raw(cast));
+      const result = query.toSQLWithBindings(flavor);
+      result.bindings.push("WRONG ACTUAL BINDING");
+      const render = jest
+        .spyOn(require("./bindings"), "toSQLWithBindings")
+        .mockReturnValue(result);
+      try {
+        expect(() => query.toSQL(flavor)).toThrow("Unused SQL bindings");
+      } finally {
+        render.mockRestore();
+      }
+    });
+
+    it("preserves quoted cast data", () => {
+      const flavor = Q.flavors.mysql;
+      const quoted = Q.select().field(Q.value(cast));
+      expect(inlineBindings(quoted.toSQLWithBindings(flavor), flavor)).toBe(
+        quoted.toSQL(flavor)
+      );
+    });
+
+    it("rejects a corrupted MySQL string binding in the real harness", () => {
+      const flavor = Q.flavors.mysql;
+      const literal = `${type} '${value}'`;
+      const expression = Q.value(literal);
+      const original = expression.toSQL;
+      expression.toSQL = function (flavor, options) {
+        return flavor.bindValue
+          ? flavor.escapeValue(cast)
+          : original.call(this, flavor, options);
+      };
+      const query = Q.select().field(expression);
+      const result = query.toSQLWithBindings(flavor);
+      expect(result).toEqual({ sql: "SELECT ? ", bindings: [cast] });
+      expect(inlineBindings(result, flavor)).toBe(
+        `SELECT ${flavor.escapeValue(cast)} `
+      );
+      expect(inlineBindings(result, flavor)).not.toBe(
+        `SELECT ${flavor.escapeValue(literal)} `
+      );
+      expect(() => query.toSQL(flavor)).toThrow();
+    });
+  });
+
+  it.each(["?", "$n"])(
+    "normalises only registered Timestream Date casts around %s placeholders",
+    (placeholder) => {
+      const flavor: ISQLFlavor = new AWSTimestreamFlavor({
+        timezone: "Europe/Prague",
+      });
+      if (placeholder === "$n")
+        flavor.parameterPlaceholder = (index) => `$${index}`;
+      const cast = "CAST('2024-01-02 00:30:00' AS TIMESTAMP)";
+      const query = Q.select()
+        .field(Q.raw(cast))
+        .field(Q.value(new Date("2024-01-01T23:30:00Z")))
+        .field(Q.value(cast));
+      const result = query.toSQLWithBindings(flavor);
+      const token = placeholder === "$n" ? "$1" : "?";
+      expect(result.sql).toBe(
+        `SELECT ${cast}, CAST(${token} AS TIMESTAMP), ${
+          placeholder === "$n" ? "$2" : "?"
+        } `
+      );
+      expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+      expect(query.toSQL(flavor)).toBe(
+        `SELECT ${cast}, TIMESTAMP '2024-01-02 00:30:00', ${flavor.escapeValue(
+          cast
+        )} `
+      );
+    }
+  );
+
+  it("normalises a generated DATEADD interval beside authored interval casts", () => {
+    const flavor = Q.flavors.postgres;
+    const cast = "CAST('1 day' AS INTERVAL)";
+    const query = Q.select()
+      .field(Q.raw(cast))
+      .field(Fn.dateAdd("created_at", 1, "day"))
+      .field(Q.value(cast));
+    const result = query.toSQLWithBindings(flavor);
+    expect(result).toEqual({
+      sql: `SELECT ${cast}, ("created_at" + CAST($1 AS INTERVAL)), CAST($2 AS TEXT) `,
+      bindings: ["1 day", cast],
+    });
+    expect(getGeneratedBindingCasts(result).map(({ sql }) => sql)).toEqual([
+      "CAST($1 AS INTERVAL)",
+      "CAST($2 AS TEXT)",
+    ]);
+    expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
   });
 
   it.each([
