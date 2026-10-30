@@ -101,14 +101,11 @@ export class PostgresFlavor extends DefaultFlavor {
     fn: FunctionExpression,
     options?: ISequelizableOptions
   ): string {
+    const name = fn.name.toUpperCase();
     const renderArgs = () =>
-      this.renderArguments(
-        fn.value,
-        options,
-        fn.name.toUpperCase() === "CONCAT"
-      );
+      this.renderArguments(fn.value, options, name === "CONCAT");
 
-    if (fn.name === "DATEADD") {
+    if (name === "DATEADD") {
       // Only interval operands are literals; the date may be a nested expression.
       const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
       const interval = parseInt(intervalValue.toString(), 10);
@@ -140,15 +137,15 @@ export class PostgresFlavor extends DefaultFlavor {
       return `(${date} + INTERVAL '${interval} ${intervalType}')`;
     }
 
-    if (fn.name === "YEAR") {
+    if (name === "YEAR") {
       return `EXTRACT(YEAR FROM ${renderArgs().join(", ")})`;
     }
 
-    if (fn.name === "MONTH") {
+    if (name === "MONTH") {
       return `EXTRACT(MONTH FROM ${renderArgs().join(", ")})`;
     }
 
-    if (fn.name === "IF") {
+    if (name === "IF") {
       const condition = ExpressionBase.deserialize(fn.value[0]).toSQL(
         this,
         options
@@ -160,7 +157,7 @@ export class PostgresFlavor extends DefaultFlavor {
       return `CASE WHEN ${condition} THEN ${thenValue} ELSE ${elseValue} END`;
     }
 
-    if (fn.name === "IFNULL") {
+    if (name === "IFNULL") {
       return `COALESCE(${renderArgs().join(",")})`;
     }
 
