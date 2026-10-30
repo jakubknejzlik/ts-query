@@ -600,8 +600,7 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
     )) {
       for (const encoding of encodings) {
         // Invariant: Expression.ts:46-55 must not reparse data skipped by visitor.ts:77.
-        const test = position.reparses && encoding.condition ? it.failing : it;
-        test(`${position.name} × ${encoding.name}`, () => {
+        it(`${position.name} × ${encoding.name}`, () => {
           const wire = typed(encoding.value);
           const input = position.input(wire);
           const options = {

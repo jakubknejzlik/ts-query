@@ -293,7 +293,7 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
     }
 
     // Invariant: a literal containing a SELECT does not add renderer-only depth.
-    it.failing(
+    it(
       "typed hidden EXISTS stays at maxDepth zero in the renderer",
       () => {
         const input = select(typed(hidden));
@@ -328,11 +328,7 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
         "NOT IN values",
       ]) {
         // Invariant: a plain string in a value slot stays data through constructors.
-        const test =
-          name === "JSON condition" && slot.startsWith("Between")
-            ? it.failing
-            : it;
-        test(`${slot} × unwrapped ${name} stays data`, () => {
+        it(`${slot} × unwrapped ${name} stays data`, () => {
           const condition =
             slot === "Binary value"
               ? binary(value)

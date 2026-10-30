@@ -38,7 +38,7 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
       dialect === "postgres" ? `$${index}` : "?";
 
     // Invariant: render-time expression reparsing must not turn literals into nodes (PR #18).
-    it.failing.each([
+    it.each([
       ["raw condition", rawCondition, encoded(rawCondition), false],
       ["hidden table/depth", hiddenExists, literal, false],
       [
@@ -222,21 +222,9 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
         1,
       ],
     ] as const;
-    const failingPositions = [
-      "condition key",
-      "operation argument",
-      "HAVING",
-      "BETWEEN values",
-      "union operand",
-      "INSERT SELECT",
-      "UPDATE subquery",
-      "CTAS",
-      "CVAS",
-    ];
     for (const [position, input, bindings, maxDepth] of positionCases) {
       // Invariant: accepted literal bytes must agree with the visited and rendered AST.
-      const test = failingPositions.includes(position) ? it.failing : it;
-      test(`keeps literals opaque in ${position}`, () => {
+      it(`keeps literals opaque in ${position}`, () => {
         const query = Q.deserialize(JSON.stringify(input), {
           allowRaw: false,
           functions: [],
@@ -274,11 +262,15 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
     }
 
     // Invariant: a trusted ValueExpression keeps its identity and serialized bytes.
-    it.failing.each(['{"type":"BinaryCondition"}', rawCondition])(
+    it.each(['{"type":"BinaryCondition"}', rawCondition])(
       "preserves trusted Q.value(%s) as a literal",
       (value) => {
         const node = Q.value(value);
-        expect(ExpressionBase.deserialize(node)).toBe(node);
+        // Compare by class + identity: a reparsed condition node with missing
+        // fields throws from toJSON, which would break jest's failure reporting.
+        const roundTrip = ExpressionBase.deserialize(node);
+        expect(roundTrip.constructor.name).toBe(node.constructor.name);
+        expect(roundTrip === node).toBe(true);
         expect(node.serialize()).toBe(encoded(value));
         const query = Q.select()
           .field(node, "ok")
