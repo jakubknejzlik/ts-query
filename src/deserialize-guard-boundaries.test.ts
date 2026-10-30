@@ -162,6 +162,8 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
     const column = (name: string) => flavor.escapeColumn(name);
     const placeholder = (index: number) =>
       flavor.parameterPlaceholder?.(index) ?? "?";
+    const textPlaceholder = (index: number) =>
+      dialect === "postgres" ? `CAST($${index} AS TEXT)` : placeholder(index);
     const assertAgreement = (query: ReturnType<typeof Q.deserialize>) => {
       const before = query.serialize();
       const result = query.toSQLWithBindings(flavor);
@@ -273,7 +275,7 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
         const result = assertAgreement(query);
         expect(result.bindings).toEqual(["opaque"]);
         expect(result.sql).toContain(
-          `SELECT ${placeholder(1)} FROM ${column("users")}`
+          `SELECT ${textPlaceholder(1)} FROM ${column("users")}`
         );
         const deeper = nest({
           ...select(),
@@ -293,26 +295,23 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
     }
 
     // Invariant: a literal containing a SELECT does not add renderer-only depth.
-    it(
-      "typed hidden EXISTS stays at maxDepth zero in the renderer",
-      () => {
-        const input = select(typed(hidden));
-        expect(() => validateSerializedQuery(input, guarded)).not.toThrow();
-        const query = Q.deserialize(JSON.stringify(input), guarded);
-        expect(summarize(query)).toMatchObject({
-          tables: ["users"],
-          maxDepth: 0,
-          hasRaw: false,
-        });
-        const onSubquery = jest.fn();
-        walk(query, { onSubquery });
-        expect(onSubquery).not.toHaveBeenCalled();
-        expect(assertAgreement(query)).toEqual({
-          sql: `SELECT ${placeholder(1)} FROM ${column("users")}`,
-          bindings: [hidden],
-        });
-      }
-    );
+    it("typed hidden EXISTS stays at maxDepth zero in the renderer", () => {
+      const input = select(typed(hidden));
+      expect(() => validateSerializedQuery(input, guarded)).not.toThrow();
+      const query = Q.deserialize(JSON.stringify(input), guarded);
+      expect(summarize(query)).toMatchObject({
+        tables: ["users"],
+        maxDepth: 0,
+        hasRaw: false,
+      });
+      const onSubquery = jest.fn();
+      walk(query, { onSubquery });
+      expect(onSubquery).not.toHaveBeenCalled();
+      expect(assertAgreement(query)).toEqual({
+        sql: `SELECT ${textPlaceholder(1)} FROM ${column("users")}`,
+        bindings: [hidden],
+      });
+    });
 
     for (const [name, value] of [
       ...strings.filter(([name]) =>
@@ -610,7 +609,7 @@ describe.each(["sqlite", "mysql", "postgres", "awsTimestream"] as const)(
       });
       expect(query.serialize()).toBe(bytes);
       expect(assertAgreement(query)).toEqual({
-        sql: `SELECT ${placeholder(1)} AS ${column("ok")} FROM ${column(
+        sql: `SELECT ${textPlaceholder(1)} AS ${column("ok")} FROM ${column(
           "users"
         )} WHERE ${column("id")} = ${placeholder(2)}`,
         bindings: [value, hidden],

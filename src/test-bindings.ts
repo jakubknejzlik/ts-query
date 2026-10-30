@@ -4,7 +4,11 @@ import { SelectQuery, Table, Join, Q } from "./Query";
 import { InsertMutation, UpdateMutation, DeleteMutation } from "./Mutation";
 import { CreateTableAsSelect } from "./CreateTableAsSelect";
 import { CreateViewAsSelect } from "./CreateViewAsSelect";
-import { toSQLWithBindings, SQLWithBindings } from "./bindings";
+import {
+  toSQLWithBindings,
+  SQLWithBindings,
+  getGeneratedBindingCasts,
+} from "./bindings";
 import { ISQLFlavor } from "./Flavor";
 
 /** Substitute only SQL placeholders, never question marks inside quoted SQL. */
@@ -13,7 +17,18 @@ export function inlineBindings(
   flavor: ISQLFlavor
 ): string {
   let index = 0;
-  return result.sql
+  let sql = result.sql;
+  // Work backwards so removing a cast cannot shift later recorded locations.
+  // Authored casts and casts inserted outside the flavor's typing path survive.
+  for (const cast of [...getGeneratedBindingCasts(result)].reverse()) {
+    if (sql.slice(cast.start, cast.start + cast.sql.length) !== cast.sql)
+      continue;
+    sql =
+      sql.slice(0, cast.start) +
+      cast.placeholder +
+      sql.slice(cast.start + cast.sql.length);
+  }
+  return sql
     .replace(
       /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g,
       (token) => {

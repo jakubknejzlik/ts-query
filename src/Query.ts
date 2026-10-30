@@ -352,12 +352,15 @@ class SelectBaseQuery extends QueryBase {
     const columns =
       this._fields.length > 0
         ? this._fields
-            .map(
-              (f) =>
-                `${Expression.deserialize(f.name).toSQL(flavor, options)}${
-                  f.alias ? ` AS ${flavor.escapeColumn(f.alias)}` : ""
-                }`
-            )
+            .map((f) => {
+              const field = Expression.deserialize(f.name);
+              const sql =
+                flavor.escapeSelectField?.(field, options) ??
+                field.toSQL(flavor, options);
+              return `${sql}${
+                f.alias ? ` AS ${flavor.escapeColumn(f.alias)}` : ""
+              }`;
+            })
             .join(", ")
         : "*";
     return `SELECT ${columns} ${super.toSQL(flavor, options)}`;

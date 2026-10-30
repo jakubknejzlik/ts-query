@@ -8,6 +8,23 @@ export interface SQLWithBindings {
   bindings: unknown[];
 }
 
+interface GeneratedBindingCast {
+  start: number;
+  sql: string;
+  placeholder: string;
+}
+
+// Keep verification metadata separate from the public { sql, bindings } result.
+const generatedBindingCasts = new WeakMap<
+  SQLWithBindings,
+  GeneratedBindingCast[]
+>();
+
+/** @internal Exact generated cast locations, used by the test parity harness. */
+export const getGeneratedBindingCasts = (
+  result: SQLWithBindings
+): readonly GeneratedBindingCast[] => generatedBindingCasts.get(result) ?? [];
+
 /** Render using the same compiler and transforms, without changing the supplied flavor. */
 export function toSQLWithBindings(
   query: ISequelizable,
@@ -22,6 +39,9 @@ export function toSQLWithBindings(
     return `${prefix}${values.length - 1})\u0000`;
   };
   const boundFlavor: ISQLFlavor = Object.create(flavor);
+  const casts = new Map<string, string>();
+  boundFlavor.onBindingCast = (placeholder, cast) =>
+    casts.set(placeholder, cast);
   boundFlavor.bindValue = bind;
   boundFlavor.escapeValue = (value: ExpressionValue) => bind(value);
   // Older builders use a raw NULL node for UPDATE nulls, empty IN and VALUES.
@@ -37,13 +57,30 @@ export function toSQLWithBindings(
     );
   const rendered = query.toSQL(boundFlavor, options);
   const bindings: unknown[] = [];
+  const generatedCasts: GeneratedBindingCast[] = [];
+  let offsetDelta = 0;
   const sql = rendered.replace(
     /\u0000tsq\([a-z0-9]+:(\d+)\)\u0000/g,
-    (token, index) => {
+    (token, index, offset) => {
       if (!token.startsWith(prefix)) return token;
       bindings.push(values[Number(index)]);
-      return flavor.parameterPlaceholder?.(bindings.length) ?? "?";
+      const placeholder = flavor.parameterPlaceholder?.(bindings.length) ?? "?";
+      const cast = casts.get(token);
+      if (cast) {
+        const start = offset - cast.indexOf(token);
+        if (rendered.slice(start, start + cast.length) === cast) {
+          generatedCasts.push({
+            start: start + offsetDelta,
+            sql: cast.replace(token, placeholder),
+            placeholder,
+          });
+        }
+      }
+      offsetDelta += placeholder.length - token.length;
+      return placeholder;
     }
   );
-  return { sql, bindings };
+  const result = { sql, bindings };
+  generatedBindingCasts.set(result, generatedCasts);
+  return result;
 }

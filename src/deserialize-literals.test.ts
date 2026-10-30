@@ -36,6 +36,8 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
     const column = (name: string) => `${quote}${name}${quote}`;
     const parameter = (index: number) =>
       dialect === "postgres" ? `$${index}` : "?";
+    const textParameter = (index: number) =>
+      dialect === "postgres" ? `CAST($${index} AS TEXT)` : "?";
 
     // Invariant: render-time expression reparsing must not turn literals into nodes (PR #18).
     it.each([
@@ -95,7 +97,7 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
           )} = ${tenant}) AS ${column("u")}`;
         const result = query.toSQLWithBindings(flavor, options);
         expect(result).toEqual({
-          sql: sql(parameter(1), parameter(2)),
+          sql: sql(textParameter(1), parameter(2)),
           bindings: [value, "t1"],
         });
         expect(result.sql).not.toMatch(/secrets|RANDOM|EXISTS|SELECT secret/);
@@ -277,7 +279,7 @@ describe.each(["sqlite", "mysql", "postgres"] as const)(
           .from("users")
           .where(Cond.equal("id", Q.value("x")));
         expect(query.toSQLWithBindings(flavor)).toEqual({
-          sql: `SELECT ${parameter(1)} AS ${column("ok")} FROM ${column(
+          sql: `SELECT ${textParameter(1)} AS ${column("ok")} FROM ${column(
             "users"
           )} WHERE ${column("id")} = ${parameter(2)}`,
           bindings: [value, "x"],
