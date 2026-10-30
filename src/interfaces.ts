@@ -47,6 +47,8 @@ export interface ICompilable {
   compile<T>(target: IQueryTarget<T>): T;
 }
 export interface ISerializableOptions {
+  /** Opt in to the v1 wire envelope; omitted preserves legacy bytes. */
+  version?: 1;
   compress?: boolean;
 }
 export interface ISerializable {

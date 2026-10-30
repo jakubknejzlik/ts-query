@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { ISQLFlavor } from "./Flavor";
 import { SelectQuery } from "./Query";
 import { compressString } from "./compression";
@@ -5,6 +6,7 @@ import { MySQLFlavor } from "./flavors/mysql";
 import {
   IMetadata,
   ISequelizable,
+  ISequelizableOptions,
   ISerializable,
   ISerializableOptions,
   MetadataOperationType,
@@ -36,16 +38,28 @@ export class CreateViewAsSelect
     return [this._viewName, ...this._select.getTableNames()];
   }
 
-  toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
+  toSQL(
+    flavor: ISQLFlavor = new MySQLFlavor(),
+    options?: ISequelizableOptions
+  ): string {
     const orReplaceStr = this._orReplace ? "OR REPLACE " : "";
     return `CREATE ${orReplaceStr}VIEW ${flavor.escapeTable(
       this._viewName
-    )} AS ${this._select.toSQL(flavor)}`;
+    )} AS ${this._select.toSQL(flavor, options)}`;
   }
 
   // serialization
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
 

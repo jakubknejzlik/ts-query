@@ -1,8 +1,13 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Dayjs } from "dayjs";
 import { ExpressionBase, ExpressionValue } from "./Expression";
 import { ISQLFlavor } from "./Flavor";
 import { Q, SelectQuery } from "./Query";
-import { ISequelizable, ISerializable } from "./interfaces";
+import {
+  ISequelizable,
+  ISequelizableOptions,
+  ISerializable,
+} from "./interfaces";
 
 type ConditionValue = ExpressionValue | Dayjs;
 
@@ -39,7 +44,14 @@ const normalizeInValues = (
 };
 
 export class Condition implements ISequelizable, ISerializable {
-  toSQL(flavor: ISQLFlavor): string {
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     throw new Error("Method not implemented.");
   }
   toJSON(): any {
@@ -60,6 +72,10 @@ export class Condition implements ISequelizable, ISerializable {
         return InCondition.fromJSON(json);
       case "NotInCondition":
         return NotInCondition.fromJSON(json);
+      case "ExistsCondition":
+        return ExistsCondition.fromJSON(json);
+      case "NotExistsCondition":
+        return NotExistsCondition.fromJSON(json);
       case "NullCondition":
         return NullCondition.fromJSON(json);
       case "LikeCondition":
@@ -100,10 +116,10 @@ class BinaryCondition extends Condition {
     this.operator = operator;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} ${this.operator} ${this.value.toSQL(
-      flavor
-    )}`;
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `${this.key.toSQL(flavor, options)} ${
+      this.operator
+    } ${this.value.toSQL(flavor, options)}`;
   }
 
   // serialization
@@ -135,9 +151,9 @@ class LogicalCondition extends Condition {
     this.operator = operator;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     return `(${this.conditions
-      .map((c) => c.toSQL(flavor))
+      .map((c) => c.toSQL(flavor, options))
       .join(` ${this.operator} `)})`;
   }
 
@@ -168,10 +184,11 @@ class BetweenCondition extends Condition {
     this.to = Q.expr(to);
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} BETWEEN ${this.from.toSQL(
-      flavor
-    )} AND ${this.to.toSQL(flavor)}`;
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `${this.key.toSQL(flavor, options)} BETWEEN ${this.from.toSQL(
+      flavor,
+      options
+    )} AND ${this.to.toSQL(flavor, options)}`;
   }
 
   // serialization
@@ -206,11 +223,11 @@ class InCondition extends Condition {
     this.subquery = normalized.subquery;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     const right = this.subquery
-      ? this.subquery.toSQL(flavor)
-      : this.values.map((v) => v.toSQL(flavor)).join(", ");
-    return `${this.key.toSQL(flavor)} IN (${right})`;
+      ? this.subquery.toSQL(flavor, options)
+      : this.values.map((v) => v.toSQL(flavor, options)).join(", ");
+    return `${this.key.toSQL(flavor, options)} IN (${right})`;
   }
 
   // serialization
@@ -251,11 +268,11 @@ class NotInCondition extends Condition {
     this.subquery = normalized.subquery;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     const right = this.subquery
-      ? this.subquery.toSQL(flavor)
-      : this.values.map((v) => v.toSQL(flavor)).join(", ");
-    return `${this.key.toSQL(flavor)} NOT IN (${right})`;
+      ? this.subquery.toSQL(flavor, options)
+      : this.values.map((v) => v.toSQL(flavor, options)).join(", ");
+    return `${this.key.toSQL(flavor, options)} NOT IN (${right})`;
   }
 
   // serialization
@@ -283,6 +300,49 @@ class NotInCondition extends Condition {
   }
 }
 
+/** A SELECT predicate; column references may correlate to an explicit outer alias. */
+class ExistsCondition extends Condition {
+  constructor(public subquery: SelectQuery) {
+    super();
+    if (!(subquery instanceof SelectQuery)) {
+      throw new TypeError("Cond.exists/notExists requires a SELECT subquery");
+    }
+  }
+
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `EXISTS (${this.subquery.toSQL(flavor, options)})`;
+  }
+
+  toJSON(): any {
+    return { type: "ExistsCondition", subquery: this.subquery.toJSON() };
+  }
+
+  static fromJSON(json: any): ExistsCondition {
+    return new ExistsCondition(SelectQuery.fromJSON(json.subquery));
+  }
+}
+
+class NotExistsCondition extends Condition {
+  constructor(public subquery: SelectQuery) {
+    super();
+    if (!(subquery instanceof SelectQuery)) {
+      throw new TypeError("Cond.exists/notExists requires a SELECT subquery");
+    }
+  }
+
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `NOT EXISTS (${this.subquery.toSQL(flavor, options)})`;
+  }
+
+  toJSON(): any {
+    return { type: "NotExistsCondition", subquery: this.subquery.toJSON() };
+  }
+
+  static fromJSON(json: any): NotExistsCondition {
+    return new NotExistsCondition(SelectQuery.fromJSON(json.subquery));
+  }
+}
+
 class NullCondition extends Condition {
   key: ExpressionBase;
   isNull: boolean;
@@ -293,8 +353,10 @@ class NullCondition extends Condition {
     this.isNull = isNull;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `${this.key.toSQL(flavor)} IS ${this.isNull ? "" : "NOT "}NULL`;
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `${this.key.toSQL(flavor, options)} IS ${
+      this.isNull ? "" : "NOT "
+    }NULL`;
   }
 
   // serialization
@@ -330,8 +392,8 @@ class LikeCondition extends Condition {
     this.caseInsensitive = caseInsensitive;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    const escapedColumn = this.key.toSQL(flavor);
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    const escapedColumn = this.key.toSQL(flavor, options);
     const escapedPattern = flavor.escapeValue(this.pattern);
     return flavor.escapeLikeCondition(
       escapedColumn,
@@ -378,10 +440,10 @@ class ColumnComparisonCondition extends Condition {
     this.operator = operator;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `${this.leftKey.toSQL(flavor)} ${
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `${this.leftKey.toSQL(flavor, options)} ${
       this.operator
-    } ${this.rightKey.toSQL(flavor)}`;
+    } ${this.rightKey.toSQL(flavor, options)}`;
   }
 
   // serialization
@@ -411,8 +473,8 @@ class NotCondition extends Condition {
     this.condition = condition;
   }
 
-  toSQL(flavor: ISQLFlavor): string {
-    return `NOT (${this.condition.toSQL(flavor)})`;
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return `NOT (${this.condition.toSQL(flavor, options)})`;
   }
 
   // serialization
@@ -491,6 +553,8 @@ export const Conditions = {
   in: (key: ConditionValue, values: InValues) => new InCondition(key, values),
   notIn: (key: ConditionValue, values: InValues) =>
     new NotInCondition(key, values),
+  exists: (subquery: SelectQuery) => new ExistsCondition(subquery),
+  notExists: (subquery: SelectQuery) => new NotExistsCondition(subquery),
   and: (conditions: (Condition | null)[] | null) => {
     const _c = (conditions || []).filter((c) => c !== null);
     return _c.length > 0 ? new LogicalCondition(_c, "AND") : null;
@@ -527,8 +591,10 @@ export const Conditions = {
     new ColumnComparisonCondition(leftKey, rightKey, ">"),
   columnLessThan: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "<"),
-  columnGreaterThanOrEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
-    new ColumnComparisonCondition(leftKey, rightKey, ">="),
+  columnGreaterThanOrEqual: (
+    leftKey: ConditionValue,
+    rightKey: ConditionValue
+  ) => new ColumnComparisonCondition(leftKey, rightKey, ">="),
   columnLessThanOrEqual: (leftKey: ConditionValue, rightKey: ConditionValue) =>
     new ColumnComparisonCondition(leftKey, rightKey, "<="),
   not: (condition: Condition) => new NotCondition(condition),
@@ -542,6 +608,8 @@ export {
   BetweenCondition,
   InCondition,
   NotInCondition,
+  ExistsCondition,
+  NotExistsCondition,
   NullCondition,
   LikeCondition,
   ColumnComparisonCondition,

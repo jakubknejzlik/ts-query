@@ -18,9 +18,31 @@ return {
 };`}
 />
 
+## SQL with bindings across flavors
+
+`toSQLWithBindings` returns SQL and a separate `bindings` array in placeholder order.
+SQLite and MySQL use `?`; PostgreSQL uses `$1`, `$2`, and so on. This query binds
+the `IN` values and `LIMIT` as well as a `DATEADD` interval. SQLite and PostgreSQL
+bind the interval as a string; MySQL binds the amount and keeps the validated unit
+in the SQL. The three results below show the same query for each flavor.
+
+<CodePreview
+  code={`const query = Q.select()
+  .field('id')
+  .field(Fn.dateAdd('created_at', 7, 'day'), 'expires_at')
+  .from('orders')
+  .where(Cond.in('status', ['pending', 'paid']))
+  .limit(10);
+return {
+  sqlite: query.toSQLWithBindings(Q.flavors.sqlite),
+  mysql: query.toSQLWithBindings(Q.flavors.mysql),
+  postgres: query.toSQLWithBindings(Q.flavors.postgres),
+};`}
+/>
+
 # Serialization & Deserialization
 
-Serialization allows queries to be transferred securely between the client and server, enabling them to be reconstructed on the backend and executed against a database. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
+Serialization preserves query structure between the client and server. It does not authorize tables or columns, or make raw SQL safe. Use the opt-in guards below for untrusted input. This is especially useful for distributed applications, caching mechanisms, and logging purposes.
 
 ### Serializing on the Client
 
@@ -33,11 +55,15 @@ Convert a query into a serialized format before sending it to the server. This e
 Reconstruct the serialized query on the backend and convert it into SQL for execution. This allows for dynamic query generation and execution while maintaining security and consistency.
 
 <CodePreview
-  code={`const serialized = Q.select().from('table').serialize();
-return Q.deserialize(serialized).toSQL(Q.flavors.mysql);`}
+  code={`const serialized = Q.select().from('table').serialize({version: 1});
+return Q.deserialize(serialized, {
+  allowRaw: false,
+  functions: [],
+  maxDepth: 2,
+}).toSQLWithBindings(Q.flavors.sqlite);`}
 />
 
-Using serialization and deserialization, developers can build efficient client-server architectures where complex queries are created on the frontend and executed on the backend without direct SQL exposure, reducing potential SQL injection risks.
+Before rendering, use the exported `walk(query, visitor)` or `summarize(query)` to apply your table, column, and operation policy. See [Guarding untrusted queries](/docs/7-guarding-untrusted-queries--docs) for live guard, policy, and tenant filter examples. Default `serialize()` stays unversioned; `serialize({version: 1})` adds the root version envelope.
 
 # Compression
 

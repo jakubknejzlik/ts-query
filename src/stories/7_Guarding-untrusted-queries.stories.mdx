@@ -1,0 +1,250 @@
+import { Meta } from "@storybook/addon-docs";
+import { CodePreview } from "./CodePreview";
+
+<Meta title="7. Guarding untrusted queries" />
+
+# Guarding untrusted queries
+
+Treat serialized queries as untrusted input. Deserialization guards validate
+structure, raw SQL, function names, and nesting. Apply a table, column, and
+operation policy separately, then add trusted filters and render SQL with bindings.
+Each example runs independently; expected failures are caught and displayed.
+
+## Guarded deserialize: allowed query
+
+This versioned query passes a case-insensitive `COUNT` allowlist, rejects raw SQL,
+and permits no nested SELECTs. Root depth is zero. Omitting `functions` allows all
+function names; an empty array denies all of them.
+
+<CodePreview
+  code={`const input = Q.select()
+  .field(Fn.count('id'), 'total')
+  .from('users')
+  .where(Cond.equal('active', 1))
+  .serialize({ version: 1 });
+return Q.deserialize(input, {
+  allowRaw: false,
+  functions: ['COUNT'],
+  maxDepth: 0,
+}).toSQLWithBindings(Q.flavors.sqlite);`}
+/>
+
+## Rejection: raw_not_allowed
+
+`allowRaw: false` rejects `Q.raw` before rendering. Catch the exported
+`DeserializeError` and inspect its stable `.code`.
+
+<CodePreview
+  code={`const input = Q.select()
+  .field(Q.raw('CURRENT_TIMESTAMP'), 'now')
+  .from('users')
+  .serialize({ version: 1 });
+try {
+  Q.deserialize(input, { allowRaw: false });
+  return 'Unexpectedly accepted';
+} catch (error) {
+  if (!(error instanceof DeserializeError)) throw error;
+  return { name: error.name, code: error.code };
+}`}
+/>
+
+## Rejection: function_not_allowed
+
+A typed `SUM` is still rejected when only `COUNT` is allowed.
+
+<CodePreview
+  code={`const input = Q.select()
+  .field(Fn.sum('amount'), 'total')
+  .from('orders')
+  .serialize({ version: 1 });
+try {
+  Q.deserialize(input, { allowRaw: false, functions: ['COUNT'] });
+  return 'Unexpectedly accepted';
+} catch (error) {
+  if (!(error instanceof DeserializeError)) throw error;
+  return { name: error.name, code: error.code };
+}`}
+/>
+
+## Rejection: max_depth_exceeded
+
+The SELECT inside `IN` has depth one, exceeding this root-only limit.
+
+<CodePreview
+  code={`const input = Q.select()
+  .field('id')
+  .from('users')
+  .where(Cond.in('id', Q.select().field('user_id').from('orders')))
+  .serialize({ version: 1 });
+try {
+  Q.deserialize(input, { allowRaw: false, functions: [], maxDepth: 0 });
+  return 'Unexpectedly accepted';
+} catch (error) {
+  if (!(error instanceof DeserializeError)) throw error;
+  return { name: error.name, code: error.code };
+}`}
+/>
+
+## Rejection: unsupported_version
+
+Unversioned payloads and the `v: 1` envelope are supported. An unknown explicit
+version is rejected; changing the envelope here simulates an unsupported sender.
+
+<CodePreview
+  code={`const envelope = JSON.parse(
+  Q.select().field('id').from('users').serialize({ version: 1 }),
+);
+envelope.v = 2;
+try {
+  Q.deserialize(JSON.stringify(envelope), { allowRaw: false });
+  return 'Unexpectedly accepted';
+} catch (error) {
+  if (!(error instanceof DeserializeError)) throw error;
+  return { name: error.name, code: error.code };
+}`}
+/>
+
+## Summarize a join, subquery, and function
+
+`summarize` reports deduplicated tables, columns, functions, operation kind, and
+maximum depth without changing the query. This example includes a join, an `IN`
+subquery, and `COUNT`. Column `table` values are the written qualifiers (`u`, `t`,
+and `o` here); they are not resolved physical table names.
+
+The traversal helpers inspect explicit references; they do not expand an implicit
+`SELECT *`. The policies below require explicit fields on the root SELECT to
+avoid returning unlisted columns through that default projection.
+
+<CodePreview
+  code={`const query = Q.select()
+  .field('t.name')
+  .field(Fn.count('u.id'), 'total')
+  .from('users', 'u')
+  .join(Q.table('teams', 't'), Cond.columnEqual('u.team_id', 't.id'))
+  .where(
+    Cond.in(
+      'u.id',
+      Q.select()
+        .field('o.user_id')
+        .from('orders', 'o')
+        .where(Cond.equal('o.status', 'paid')),
+    ),
+  )
+  .groupBy('t.name');
+return summarize(query);`}
+/>
+
+## Walk: table and column policy
+
+A visitor can throw to reject any occurrence, including inside a subquery.
+This SELECT-only policy allows `id` and `active` on `users`, and rejects qualified
+column references and explicit wildcards. The output shows an allowed query and both
+table and column rejections. For policies across multiple tables, resolve aliases
+within each query scope or explicitly grant the same column names on every
+allowed table, as in the next example.
+
+<CodePreview
+  code={`const check = (query) => {
+  try {
+    if (!(query instanceof SelectQuery) || query.getFields().length === 0) {
+      throw new Error('Only SELECT with explicit fields is allowed');
+    }
+    walk(query, {
+      onTable(name) {
+        if (name !== 'users') throw new Error('Table denied: ' + name);
+      },
+      onColumn(table, name) {
+        if (table !== undefined || !['id', 'active'].includes(name)) {
+          throw new Error(
+            'Column denied: ' + (table ? table + '.' : '') + name,
+          );
+        }
+      },
+      onRaw() {
+        throw new Error('Raw SQL denied');
+      },
+      onFunction() {
+        throw new Error('Functions denied');
+      },
+      onUnion() {
+        throw new Error('UNION denied');
+      },
+    });
+    return 'Allowed';
+  } catch (error) {
+    return error.message;
+  }
+};
+return {
+  allowed: check(
+    Q.select().field('id').from('users').where(Cond.equal('active', 1)),
+  ),
+  tableRejected: check(
+    Q.select()
+      .field('id')
+      .from('users')
+      .where(Cond.in('id', Q.select().field('id').from('secrets'))),
+  ),
+  columnRejected: check(Q.select().field('password_hash').from('users')),
+};`}
+/>
+
+## End to end: guarded query with tenant filters
+
+The client sends a versioned query. The server deserializes with guards and uses
+`summarize` to permit only SELECT, two tables, and a shared column-name allowlist
+on either table. This policy rejects qualified references, explicit wildcards, raw SQL,
+functions, and unions. Tenant identity comes from authenticated server context.
+
+`transformTable` wraps both `users` and the `orders` table inside `IN` with
+`tenant_id = ?`. Its replacement is trusted builder code; the table callback is
+disabled inside each replacement to prevent recursive wrapping. The output shows
+both filters and two tenant bindings interleaved with the client values in SQL order.
+
+<CodePreview
+  code={`// Client
+const input = Q.select()
+  .field('id')
+  .from('users')
+  .where(Cond.equal('active', 1))
+  .where(
+    Cond.in(
+      'id',
+      Q.select()
+        .field('user_id')
+        .from('orders')
+        .where(Cond.equal('status', 'paid')),
+    ),
+  )
+  .serialize({ version: 1 });
+// Server
+const query = Q.deserialize(input, {
+  allowRaw: false,
+  functions: [],
+  maxDepth: 1,
+});
+if (!(query instanceof SelectQuery) || query.getFields().length === 0) {
+  throw new Error('Only SELECT with explicit fields is allowed');
+}
+const summary = summarize(query);
+const allowedTables = ['users', 'orders'];
+const allowedColumns = ['id', 'active', 'user_id', 'status'];
+if (
+  summary.kind !== MetadataOperationType.SELECT ||
+  summary.hasRaw ||
+  summary.hasUnion ||
+  summary.functions.length > 0 ||
+  summary.tables.some((name) => !allowedTables.includes(name)) ||
+  summary.columns.some(
+    ({ table, name }) => table !== undefined || !allowedColumns.includes(name),
+  )
+) {
+  throw new Error('Query denied by policy');
+}
+const tenantId = 'tenant-123'; // From authenticated server context
+const result = query.toSQLWithBindings(Q.flavors.sqlite, {
+  transformTable: (name) =>
+    Q.select().from(name).where(Cond.equal('tenant_id', tenantId)),
+});
+return { summary, ...result };`}
+/>

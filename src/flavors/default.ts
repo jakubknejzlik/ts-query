@@ -1,3 +1,4 @@
+import { ISequelizableOptions } from "../interfaces";
 import dayjs from "dayjs";
 import {
   Expression,
@@ -21,6 +22,7 @@ type FlavorOptions = {
 };
 
 export class DefaultFlavor implements ISQLFlavor {
+  bindValue?: (value: unknown) => string;
   protected columnQuotes = "`";
   protected stringQuotes = `"`;
 
@@ -43,10 +45,14 @@ export class DefaultFlavor implements ISQLFlavor {
       if (columnMatch) {
         return name
           .split(".")
-          .map(part => part === "*" ? "*" : `${this.columnQuotes}${part.replace(
-            new RegExp(`/${this.columnQuotes}/`, "g"),
-            `${this.columnQuotes}${this.columnQuotes}`
-          )}${this.columnQuotes}`)
+          .map((part) =>
+            part === "*"
+              ? "*"
+              : `${this.columnQuotes}${part.replace(
+                  new RegExp(`/${this.columnQuotes}/`, "g"),
+                  `${this.columnQuotes}${this.columnQuotes}`
+                )}${this.columnQuotes}`
+          )
           .join(".");
       }
       // In legacy mode, allow through values that appear to be:
@@ -57,14 +63,14 @@ export class DefaultFlavor implements ISQLFlavor {
       if (
         name.includes(this.columnQuotes) ||
         name.includes(this.stringQuotes) ||
-        name.includes('(') ||
-        name.includes(')') ||
-        name.includes(' ') ||
-        name.includes(',') ||
+        name.includes("(") ||
+        name.includes(")") ||
+        name.includes(" ") ||
+        name.includes(",") ||
         /^[+\-]?\d+$/.test(name) ||
         /^[*]$/.test(name) ||
-        name === 'TRUE' ||
-        name === 'FALSE'
+        name === "TRUE" ||
+        name === "FALSE"
       ) {
         return `${name}`;
       }
@@ -75,11 +81,15 @@ export class DefaultFlavor implements ISQLFlavor {
           `${this.columnQuotes}${this.columnQuotes}`
         )
         .split(".")
-        .join(`${this.columnQuotes}.${this.columnQuotes}`)}${this.columnQuotes}`;
+        .join(`${this.columnQuotes}.${this.columnQuotes}`)}${
+        this.columnQuotes
+      }`;
     }
     return name
       .split(".")
-      .map(part => part === "*" ? "*" : `${this.columnQuotes}${part}${this.columnQuotes}`)
+      .map((part) =>
+        part === "*" ? "*" : `${this.columnQuotes}${part}${this.columnQuotes}`
+      )
       .join(".");
   }
 
@@ -122,33 +132,51 @@ export class DefaultFlavor implements ISQLFlavor {
     }
     return str;
   }
-  escapeFunction(fn: FunctionExpression): string {
+  escapeFunction(
+    fn: FunctionExpression,
+    options?: ISequelizableOptions
+  ): string {
     const args = fn.value
       .map((x) => Expression.deserialize(x))
-      .map((x) => x.toSQL(this));
+      .map((x) => x.toSQL(this, options));
     if (fn.name === "DATEADD") {
-      const argsValues = fn.value.map((x) =>
-        ExpressionBase.deserializeValue(x)
-      );
-      const interval = parseInt(argsValues[1].value.toString(), 10);
+      // Only interval operands are literals; the date may be a nested expression.
+      const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
+      const interval = parseInt(intervalValue.toString(), 10);
       if (isNaN(interval)) {
-        throw new Error(`Invalid DATEADD interval: ${argsValues[1].value}`);
+        throw new Error(`Invalid DATEADD interval: ${intervalValue}`);
       }
-      const intervalType = argsValues[2].value.toString().toLowerCase();
+      const intervalType = ExpressionBase.deserializeValue(fn.value[2])
+        .value.toString()
+        .toLowerCase();
       // MySQL supports: YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, WEEK, QUARTER
-      const validIntervalTypes = ['year', 'month', 'day', 'hour', 'minute', 'second', 'week', 'quarter'];
+      const validIntervalTypes = [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "week",
+        "quarter",
+      ];
       if (!validIntervalTypes.includes(intervalType)) {
         throw new Error(`Invalid DATEADD interval type: ${intervalType}`);
       }
-      return `DATE_ADD(${args[0]}, INTERVAL ${interval} ${intervalType.toUpperCase()})`;
+      return `DATE_ADD(${args[0]}, INTERVAL ${
+        this.bindValue ? this.bindValue(interval) : interval
+      } ${intervalType.toUpperCase()})`;
     }
     return `${fn.name}(${args.join(",")})`;
   }
-  escapeOperation(fn: OperationExpression): string {
+  escapeOperation(
+    fn: OperationExpression,
+    options?: ISequelizableOptions
+  ): string {
     return (
       "(" +
       fn.value
-        .map((x) => Expression.deserialize(x).toSQL(this))
+        .map((x) => Expression.deserialize(x).toSQL(this, options))
         .join(` ${fn.operation} `) +
       ")"
     );

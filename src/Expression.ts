@@ -1,3 +1,4 @@
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Condition } from "./Condition";
 import { ISQLFlavor } from "./Flavor";
 import {
@@ -16,6 +17,13 @@ export type ExpressionValue =
   | Date;
 
 export class ExpressionBase implements ISerializable, ISequelizable {
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
   static deserialize(value: ExpressionValue): ExpressionBase {
     if (value instanceof Date) {
       return ValueExpression.deserialize(value);
@@ -213,8 +221,8 @@ export class FunctionExpression extends Expression<ExpressionValue[]> {
   constructor(public name: string, ...args: ExpressionValue[]) {
     super(args);
   }
-  toSQL(flavor: ISQLFlavor, _?: ISequelizableOptions): string {
-    return flavor.escapeFunction(this);
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return flavor.escapeFunction(this, options);
   }
   static isValidString(str: string): boolean {
     return str.startsWith("FN(") && str.endsWith(")");
@@ -243,8 +251,8 @@ export class OperationExpression extends Expression<ExpressionValue[]> {
   constructor(public operation, ...args: ExpressionValue[]) {
     super(args);
   }
-  toSQL(flavor: ISQLFlavor, _?: ISequelizableOptions): string {
-    return flavor.escapeOperation(this);
+  toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
+    return flavor.escapeOperation(this, options);
   }
   static isValidString(str: string): boolean {
     return str.startsWith("OP(") && str.endsWith(")");

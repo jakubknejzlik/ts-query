@@ -17,6 +17,8 @@ export {
   BetweenCondition,
   InCondition,
   NotInCondition,
+  ExistsCondition,
+  NotExistsCondition,
   NullCondition,
   LikeCondition,
   ColumnComparisonCondition,
@@ -27,14 +29,7 @@ export type { Operator } from "./Condition";
 export { Fn, Function } from "./Function";
 
 // Query exports
-export {
-  Q,
-  Query,
-  SelectQuery,
-  Table,
-  Join,
-  UnionType,
-} from "./Query";
+export { Q, Query, SelectQuery, Table, Join, UnionType } from "./Query";
 export type { JoinType, SelectField, OrderClause, TableSource } from "./Query";
 
 // Interface exports
@@ -53,3 +48,18 @@ export type { ExpressionRawValue, ExpressionValue } from "./Expression";
 
 // Target exports
 export { SQLTarget } from "./targets";
+
+export { toSQLWithBindings } from "./bindings";
+export type { SQLWithBindings } from "./bindings";
+export type { ISequelizableOptions, ISerializableOptions } from "./interfaces";
+
+export { DeserializeError } from "./deserialize";
+export type { DeserializeOptions, DeserializeErrorCode } from "./deserialize";
+export { walk, summarize } from "./visitor";
+export type {
+  GuardQuery,
+  MutationKind,
+  QueryVisitor,
+  QueryColumn,
+  QuerySummary,
+} from "./visitor";

@@ -1,3 +1,10 @@
+import {
+  DeserializeOptions,
+  DeserializeError,
+  assertSerializationVersion,
+  validateSerializedQuery,
+} from "./deserialize";
+import { toSQLWithBindings, SQLWithBindings } from "./bindings";
 import { Dayjs, isDayjs } from "dayjs";
 import pako from "pako";
 import { compressString, decompressString } from "./compression";
@@ -134,11 +141,19 @@ export const escapeTable = (
   options?: ISequelizableOptions
 ): string => {
   if (isSelectQuery(table)) return `(${table.toSQL(flavor, options)})`;
-  if (isTableReference(table)) return flavor.escapeTable(getTableReferenceName(table));
+  if (isTableReference(table))
+    return flavor.escapeTable(getTableReferenceName(table));
   return flavor.escapeTable(table);
 };
 
 export class QueryBase implements ISequelizable, IMetadata {
+  toSQLWithBindings(
+    flavor?: ISQLFlavor,
+    options?: ISequelizableOptions
+  ): SQLWithBindings {
+    return toSQLWithBindings(this, flavor, options);
+  }
+
   protected _tables: Table[] = [];
   protected _joins?: Join[] = [];
 
@@ -250,7 +265,7 @@ export class Join {
 
   toSQL(flavor: ISQLFlavor, options?: ISequelizableOptions): string {
     return `${this._type} JOIN ${this._table.toSQL(flavor, options)}${
-      this._condition ? ` ON ${this._condition.toSQL(flavor)}` : ""
+      this._condition ? ` ON ${this._condition.toSQL(flavor, options)}` : ""
     }`;
   }
 
@@ -354,7 +369,10 @@ export enum UnionType {
   UNION_ALL = "UNION ALL",
 }
 
-export class SelectQuery extends SelectBaseQuery implements ISerializable, ICompilable {
+export class SelectQuery
+  extends SelectBaseQuery
+  implements ISerializable, ICompilable
+{
   protected _where: Condition[] = [];
   protected _having: Condition[] = [];
   protected _limit?: number;
@@ -505,21 +523,23 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable, IComp
       sql += ` ${this._joins.map((j) => j.toSQL(flavor, options)).join(" ")}`;
     }
     if (this._where.length > 0) {
-      sql += ` WHERE ${this._where.map((w) => w.toSQL(flavor)).join(" AND ")}`;
+      sql += ` WHERE ${this._where
+        .map((w) => w.toSQL(flavor, options))
+        .join(" AND ")}`;
     }
     if (this._groupBy.length > 0) {
       sql += ` GROUP BY ${this._groupBy
-        .map((c) => c.toSQL(flavor))
+        .map((c) => c.toSQL(flavor, options))
         .join(", ")}`;
     }
     if (this._having.length > 0) {
       sql += ` HAVING ${this._having
-        .map((w) => w.toSQL(flavor))
+        .map((w) => w.toSQL(flavor, options))
         .join(" AND ")}`;
     }
     if (this._orderBy.length > 0) {
       sql += ` ORDER BY ${this._orderBy
-        .map((o) => `${o.field.toSQL(flavor)} ${o.direction}`)
+        .map((o) => `${o.field.toSQL(flavor, options)} ${o.direction}`)
         .join(", ")}`;
     }
 
@@ -546,7 +566,9 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable, IComp
 
   // serialization
   serialize(opts: ISerializableOptions = { compress: false }): string {
-    const json = JSON.stringify(this.toJSON());
+    const json = JSON.stringify(
+      opts.version === 1 ? { v: 1, ...this.toJSON() } : this.toJSON()
+    );
     return opts.compress ? compressString(json) : json;
   }
   toJSON(): any {
@@ -629,13 +651,15 @@ export class SelectQuery extends SelectBaseQuery implements ISerializable, IComp
   }
 }
 
-const deserialize = (payload: string) => {
+const deserialize = (payload: string, options?: DeserializeOptions) => {
   try {
     const parsed =
-      payload[0] === "{"
+      payload.trimStart()[0] === "{"
         ? JSON.parse(payload)
         : JSON.parse(decompressString(payload));
 
+    assertSerializationVersion(parsed);
+    if (options !== undefined) validateSerializedQuery(parsed, options);
     switch (parsed.type as OperationType) {
       case OperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
@@ -653,7 +677,11 @@ const deserialize = (payload: string) => {
         throw new Error("Unknown mutation type");
     }
   } catch (e) {
-    throw new Error(`Error parsing query: ${(e as Error).message}`);
+    if (e instanceof DeserializeError) throw e;
+    const message = `Error parsing query: ${(e as Error).message}`;
+    if (options !== undefined)
+      throw new DeserializeError("invalid_node", message);
+    throw new Error(message);
   }
 };
 
@@ -671,8 +699,7 @@ const inputValueToExpressionValue = (val: InputValue): ExpressionValue => {
 };
 
 const values = (data: Record<string, any>[]): SelectQuery => {
-  if (data.length === 0)
-    throw new Error("values requires at least one row");
+  if (data.length === 0) throw new Error("values requires at least one row");
   const columns = Object.keys(data[0]);
 
   // First row: SELECT val AS col1, val AS col2, ...
