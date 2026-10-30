@@ -539,24 +539,71 @@ describe("Parameterized SQL", () => {
     }
   );
 
-  it("normalises a generated DATEADD interval beside authored interval casts", () => {
-    const flavor = Q.flavors.postgres;
-    const cast = "CAST('1 day' AS INTERVAL)";
-    const query = Q.select()
-      .field(Q.raw(cast))
-      .field(Fn.dateAdd("created_at", 1, "day"))
-      .field(Q.value(cast));
-    const result = query.toSQLWithBindings(flavor);
-    expect(result).toEqual({
-      sql: `SELECT ${cast}, ("created_at" + CAST($1 AS INTERVAL)), CAST($2 AS TEXT) `,
-      bindings: ["1 day", cast],
-    });
-    expect(getGeneratedBindingCasts(result).map(({ sql }) => sql)).toEqual([
-      "CAST($1 AS INTERVAL)",
-      "CAST($2 AS TEXT)",
-    ]);
-    expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+  describe.each(["?", "$n"])("%s generated cast reconstruction", (style) => {
+    it.each(["before", "after"])(
+      "normalises a custom cast with quoted placeholders %s the binding",
+      (position) => {
+        const flavor: ISQLFlavor = new DefaultFlavor();
+        if (style === "$n")
+          flavor.parameterPlaceholder = (index) => `$${index}`;
+        // Include the matching numbered token as quoted data too, so both
+        // styles expose an indexOf lookup that ignores SQL quoting.
+        const quoted = style === "$n" ? "? $1" : "?";
+        const wrap = (placeholder: string) =>
+          position === "before"
+            ? `CAST(COALESCE(NULLIF('${quoted}', '${quoted}'), ${placeholder}) AS INTEGER)`
+            : `CAST(COALESCE(${placeholder}, NULLIF('${quoted}', '${quoted}')) AS INTEGER)`;
+        flavor.escapeBoundValue = function (placeholder) {
+          const sql = wrap(placeholder);
+          this.onBindingCast?.(placeholder, sql);
+          return sql;
+        };
+        const query = Q.select().field(Q.value(7));
+        const result = query.toSQLWithBindings(flavor);
+        const placeholder = style === "$n" ? "$1" : "?";
+        expect(result).toEqual({
+          sql: `SELECT ${wrap(placeholder)} `,
+          bindings: [7],
+        });
+        expect(getGeneratedBindingCasts(result)).toEqual([
+          { start: 7, sql: wrap(placeholder), placeholder },
+        ]);
+        expect(inlineBindings(result, flavor)).toBe("SELECT 7 ");
+        expect(query.toSQL(flavor)).toBe("SELECT 7 ");
+      }
+    );
   });
+
+  it.each(["?", "$n"])(
+    "normalises a generated DATEADD interval beside authored interval casts with %s placeholders",
+    (style) => {
+      const flavor: ISQLFlavor = new PostgresFlavor();
+      if (style === "?") flavor.parameterPlaceholder = () => "?";
+      const first = style === "$n" ? "$1" : "?";
+      const second = style === "$n" ? "$2" : "?";
+      const cast = "CAST('1 day' AS INTERVAL)";
+      const query = Q.select()
+        .field(Q.raw(cast))
+        .field(Fn.dateAdd("created_at", 1, "day"))
+        .field(Q.value(cast));
+      const result = query.toSQLWithBindings(flavor);
+      expect(result).toEqual({
+        sql: `SELECT ${cast}, ("created_at" + CAST(${first} AS INTERVAL)), CAST(${second} AS TEXT) `,
+        bindings: ["1 day", cast],
+      });
+      expect(getGeneratedBindingCasts(result).map(({ sql }) => sql)).toEqual([
+        `CAST(${first} AS INTERVAL)`,
+        `CAST(${second} AS TEXT)`,
+      ]);
+      expect(inlineBindings(result, flavor)).toBe(
+        `SELECT ${cast}, ("created_at" + INTERVAL '1 day'), '${cast.replace(
+          /'/g,
+          "''"
+        )}' `
+      );
+      expect(inlineBindings(result, flavor)).toBe(query.toSQL(flavor));
+    }
+  );
 
   it.each([
     ["default", DefaultFlavor],
