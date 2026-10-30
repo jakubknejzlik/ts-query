@@ -44,7 +44,8 @@ export class AWSTimestreamFlavor extends DefaultFlavor {
     fn: FunctionExpression,
     options?: ISequelizableOptions
   ): string {
-    if (fn.name === "DATEADD") {
+    const name = fn.name.toUpperCase();
+    if (name === "DATEADD") {
       const args = fn.value.map((arg) =>
         ExpressionBase.deserialize(arg).toSQL(this, options)
       );
