@@ -98,9 +98,10 @@ describePostgres("PostgreSQL case-insensitive built-in functions (#29)", () => {
           )
           .orderBy("ordinal");
       const expected = [
-        { value: new Date("2023-12-16T00:00:00Z") },
-        { value: new Date("2024-01-16T00:00:00Z") },
-        { value: new Date("2025-02-16T00:00:00Z") },
+        // PGlite decodes timestamp without time zone in the process's local zone.
+        { value: new Date("2023-12-16T00:00:00") },
+        { value: new Date("2024-01-16T00:00:00") },
+        { value: new Date("2025-02-16T00:00:00") },
       ];
       await expectEquivalent(query("dateadd"), expected);
       await expectEquivalent(query("DaTeAdD"), expected);
