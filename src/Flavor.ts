@@ -13,6 +13,8 @@ export interface ISQLFlavor {
   parameterPlaceholder?(index: number): string;
   /** Used by the binding renderer for flavor-specific literal syntax. */
   bindValue?(value: unknown): string;
+  /** Optional syntax for a bound literal outside explicitly typed positions. */
+  escapeBoundValue?(placeholder: string, value: unknown): string;
   /** @internal Report flavor-generated casts for binding parity verification. */
   onBindingCast?(placeholder: string, cast: string): void;
   escapeColumn(name: string, legacy?: boolean): string;

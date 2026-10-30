@@ -43,7 +43,10 @@ export function toSQLWithBindings(
   boundFlavor.onBindingCast = (placeholder, cast) =>
     casts.set(placeholder, cast);
   boundFlavor.bindValue = bind;
-  boundFlavor.escapeValue = (value: ExpressionValue) => bind(value);
+  boundFlavor.escapeValue = (value: ExpressionValue) => {
+    const placeholder = bind(value);
+    return boundFlavor.escapeBoundValue?.(placeholder, value) ?? placeholder;
+  };
   // Older builders use a raw NULL node for UPDATE nulls, empty IN and VALUES.
   boundFlavor.escapeRawValue = (value) =>
     value === "NULL"
