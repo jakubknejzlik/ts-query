@@ -7,6 +7,12 @@ import { inlineBindings } from "../test-bindings";
 const flavor = Q.flavors.postgres;
 
 describe("PostgresFlavor", () => {
+  it("preserves unknown function name casing (#29)", () => {
+    expect(
+      new FunctionExpression("myFunc", "value", Q.value("x")).toSQL(flavor)
+    ).toEqual("myFunc(\"value\",'x')");
+  });
+
   describe("bound literal casts", () => {
     it("types CONCAT literals beside columns and preserves binding order", () => {
       const query = Q.select()
