@@ -1,4 +1,4 @@
-import type { PGlite } from "@electric-sql/pglite";
+import { PGlite } from "@electric-sql/pglite";
 import { Cond, Fn, Q } from "./index";
 import { FunctionExpression } from "./Expression";
 import type {
@@ -8,20 +8,12 @@ import type {
   UpdateMutation,
 } from "./index";
 
-const supportsPGlite = Number(process.versions.node.split(".")[0]) >= 18;
-if (!supportsPGlite) {
-  console.info("Skipping PostgreSQL execution tests on Node.js <18.");
-}
-const describePostgres = supportsPGlite ? describe : describe.skip;
-
-describePostgres("PostgreSQL inline and bound execution (#21)", () => {
+describe("PostgreSQL inline and bound execution (#21)", () => {
   let db: PGlite;
   const pg = Q.flavors.postgres;
   const firstId = "00000000-0000-4000-8000-000000000001";
 
   beforeAll(async () => {
-    // Keep the runtime import in this hook so Node 16 can skip loading PGlite.
-    const { PGlite } = require("@electric-sql/pglite");
     db = new PGlite();
     await db.waitReady;
     // Inline Dates have no offset; interpret them in the renderer's local zone.

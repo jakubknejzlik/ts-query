@@ -1,21 +1,13 @@
-import type { PGlite } from "@electric-sql/pglite";
+import { PGlite } from "@electric-sql/pglite";
 import { Cond, Q } from "./index";
 import type { SelectQuery } from "./index";
 import { FunctionExpression } from "./Expression";
 
-const supportsPGlite = Number(process.versions.node.split(".")[0]) >= 18;
-if (!supportsPGlite) {
-  console.info("Skipping PostgreSQL execution tests on Node.js <18.");
-}
-const describePostgres = supportsPGlite ? describe : describe.skip;
-
-describePostgres("PostgreSQL case-insensitive built-in functions (#29)", () => {
+describe("PostgreSQL case-insensitive built-in functions (#29)", () => {
   let db: PGlite;
   const pg = Q.flavors.postgres;
 
   beforeAll(async () => {
-    // Keep the runtime import in this hook so Node 16 can skip loading PGlite.
-    const { PGlite } = require("@electric-sql/pglite");
     db = new PGlite();
     await db.waitReady;
     await db.exec(`
