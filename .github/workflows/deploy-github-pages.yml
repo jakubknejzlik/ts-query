@@ -12,6 +12,12 @@ permissions:
   pages: write
   id-token: write
 
+# Only one Pages deployment can run at a time; queue instead of failing
+# when two pushes to main land close together (e.g. merge + release commit).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 # List of jobs
 jobs:
   deploy:
