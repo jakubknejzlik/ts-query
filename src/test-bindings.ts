@@ -20,12 +20,20 @@ export function inlineBindings(
   let cursor = 0;
   let sql = "";
   const usedBindings = new Set<number>();
-  const casts = new Map(
-    getGeneratedBindingCasts(result).map(
-      (cast) => [cast.start + cast.sql.indexOf(cast.placeholder), cast] as const
-    )
-  );
   const tokens = /('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\$\d+|\?)/g;
+  const casts = new Map(
+    getGeneratedBindingCasts(result).map((cast) => {
+      // Scan independently so quoted placeholders cannot affect the key or
+      // advance the tokenizer used to reconstruct the full query below.
+      const castTokens = new RegExp(tokens);
+      let match: RegExpExecArray | null;
+      while ((match = castTokens.exec(cast.sql))) {
+        if (match[0][0] === "?" || match[0][0] === "$")
+          return [cast.start + match.index, cast] as const;
+      }
+      throw new Error("Missing SQL placeholder in generated cast");
+    })
+  );
   let match: RegExpExecArray | null;
   while ((match = tokens.exec(result.sql))) {
     const token = match[0];
