@@ -1,11 +1,35 @@
 import { Cond } from "../Condition";
 import { Fn } from "../Function";
+import { FunctionExpression } from "../Expression";
 import { Q } from "../Query";
 import { DefaultFlavor } from "./default";
 
 const flavor = new DefaultFlavor();
 
 describe("DefaultFlavor", () => {
+  describe("function name casing (#29)", () => {
+    it("renders dateadd and DaTeAdD like DATEADD in default and MySQL", () => {
+      const args = ["created_at", Q.value(1), Q.value("day")];
+      const upper = new FunctionExpression("DATEADD", ...args);
+      const lower = new FunctionExpression("dateadd", ...args);
+      const mixed = new FunctionExpression("DaTeAdD", ...args);
+      expect(lower.toSQL(flavor)).toEqual(upper.toSQL(flavor));
+      expect(mixed.toSQL(flavor)).toEqual(upper.toSQL(flavor));
+      expect(lower.toSQL(Q.flavors.mysql)).toEqual(
+        upper.toSQL(Q.flavors.mysql)
+      );
+      expect(mixed.toSQL(Q.flavors.mysql)).toEqual(
+        upper.toSQL(Q.flavors.mysql)
+      );
+    });
+
+    it("preserves unknown function name casing in default and MySQL", () => {
+      const fn = new FunctionExpression("myFunc", "value", Q.value("x"));
+      expect(fn.toSQL(flavor)).toEqual('myFunc(`value`,"x")');
+      expect(fn.toSQL(Q.flavors.mysql)).toEqual('myFunc(`value`,"x")');
+    });
+  });
+
   describe("Quote escaping", () => {
     it("should use backticks for column names", () => {
       const query = Q.select()

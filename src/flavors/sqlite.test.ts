@@ -1,10 +1,61 @@
 import { Cond } from "../Condition";
 import { Fn } from "../Function";
+import { FunctionExpression } from "../Expression";
 import { Q } from "../Query";
 
 const flavor = Q.flavors.sqlite;
 
 describe("SQLiteFlavor", () => {
+  describe("function name casing (#29)", () => {
+    it("renders year and YeAr like YEAR", () => {
+      const upper = new FunctionExpression("YEAR", "created_at").toSQL(flavor);
+      expect(
+        new FunctionExpression("year", "created_at").toSQL(flavor)
+      ).toEqual(upper);
+      expect(
+        new FunctionExpression("YeAr", "created_at").toSQL(flavor)
+      ).toEqual(upper);
+    });
+
+    it("renders month and MoNtH like MONTH", () => {
+      const upper = new FunctionExpression("MONTH", "created_at").toSQL(flavor);
+      expect(
+        new FunctionExpression("month", "created_at").toSQL(flavor)
+      ).toEqual(upper);
+      expect(
+        new FunctionExpression("MoNtH", "created_at").toSQL(flavor)
+      ).toEqual(upper);
+    });
+
+    it("renders if and iF like IF", () => {
+      const args = [Cond.equal("active", true), Q.value(1), Q.value(0)];
+      const upper = new FunctionExpression("IF", ...args).toSQL(flavor);
+      expect(new FunctionExpression("if", ...args).toSQL(flavor)).toEqual(
+        upper
+      );
+      expect(new FunctionExpression("iF", ...args).toSQL(flavor)).toEqual(
+        upper
+      );
+    });
+
+    it("renders dateadd and DaTeAdD like DATEADD", () => {
+      const args = ["created_at", Q.value(1), Q.value("day")];
+      const upper = new FunctionExpression("DATEADD", ...args).toSQL(flavor);
+      expect(new FunctionExpression("dateadd", ...args).toSQL(flavor)).toEqual(
+        upper
+      );
+      expect(new FunctionExpression("DaTeAdD", ...args).toSQL(flavor)).toEqual(
+        upper
+      );
+    });
+
+    it("preserves unknown function name casing", () => {
+      expect(
+        new FunctionExpression("myFunc", "value", Q.value("x")).toSQL(flavor)
+      ).toEqual("myFunc(`value`,'x')");
+    });
+  });
+
   describe("Quote escaping", () => {
     it("should use backticks for column names", () => {
       const query = Q.select()
