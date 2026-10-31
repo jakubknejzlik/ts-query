@@ -140,10 +140,11 @@ export class DefaultFlavor implements ISQLFlavor {
     fn: FunctionExpression,
     options?: ISequelizableOptions
   ): string {
+    const name = fn.name.toUpperCase();
     const args = fn.value
       .map((x) => Expression.deserialize(x))
       .map((x) => x.toSQL(this, options));
-    if (fn.name === "DATEADD") {
+    if (name === "DATEADD") {
       // Only interval operands are literals; the date may be a nested expression.
       const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
       const interval = parseInt(intervalValue.toString(), 10);

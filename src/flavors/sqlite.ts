@@ -9,20 +9,21 @@ export class SQLiteFlavor extends MySQLFlavor {
     fn: FunctionExpression,
     options?: ISequelizableOptions
   ): string {
+    const name = fn.name.toUpperCase();
     const renderArgs = () =>
       fn.value.map((arg) =>
         ExpressionBase.deserialize(arg).toSQL(this, options)
       );
-    if (fn.name === "MONTH") {
+    if (name === "MONTH") {
       return `strftime('%m', ${renderArgs().join(", ")}, 'localtime')`;
     }
-    if (fn.name === "YEAR") {
+    if (name === "YEAR") {
       return `strftime('%Y', ${renderArgs().join(", ")}, 'localtime')`;
     }
-    if (fn.name === "IF") {
+    if (name === "IF") {
       return `IIF(${renderArgs().join(", ")})`;
     }
-    if (fn.name === "DATEADD") {
+    if (name === "DATEADD") {
       // Only interval operands are literals; the date may be a nested expression.
       const intervalValue = ExpressionBase.deserializeValue(fn.value[1]).value;
       const interval = parseInt(intervalValue.toString(), 10);
