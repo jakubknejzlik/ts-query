@@ -24,6 +24,9 @@
   ],
   "author": "Jakub Knejzlik",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "bugs": {
     "url": "https://github.com/jakubknejzlik/ts-query/issues"
   },
