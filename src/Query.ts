@@ -1,3 +1,12 @@
+import { CreateTable, DropTable, AlterTable } from "./DDL";
+import {
+  ShowSchemas,
+  ShowTables,
+  DescribeTable,
+  ShowColumns,
+} from "./Introspection";
+import { DuckDBFlavor } from "./flavors/duckdb";
+import { isSchemaNodeKind } from "./schema-validation";
 import {
   DeserializeOptions,
   DeserializeError,
@@ -40,6 +49,7 @@ import { DeleteMutation, InsertMutation, UpdateMutation } from "./Mutation";
 export type InputValue = ExpressionValue | Dayjs | null;
 
 const flavors = {
+  duckdb: new DuckDBFlavor(),
   mysql: new MySQLFlavor(),
   awsTimestream: new AWSTimestreamFlavor(),
   sqlite: new SQLiteFlavor(),
@@ -662,8 +672,23 @@ const deserialize = (payload: string, options?: DeserializeOptions) => {
         : JSON.parse(decompressString(payload));
 
     assertSerializationVersion(parsed);
-    if (options !== undefined) validateSerializedQuery(parsed, options);
+    if (options !== undefined || isSchemaNodeKind(parsed?.type))
+      validateSerializedQuery(parsed, options ?? {});
     switch (parsed.type as OperationType) {
+      case OperationType.CREATE_TABLE:
+        return CreateTable.fromJSON(parsed);
+      case OperationType.DROP_TABLE:
+        return DropTable.fromJSON(parsed);
+      case OperationType.ALTER_TABLE:
+        return AlterTable.fromJSON(parsed);
+      case OperationType.SHOW_SCHEMAS:
+        return ShowSchemas.fromJSON(parsed);
+      case OperationType.SHOW_TABLES:
+        return ShowTables.fromJSON(parsed);
+      case OperationType.DESCRIBE_TABLE:
+        return DescribeTable.fromJSON(parsed);
+      case OperationType.SHOW_COLUMNS:
+        return ShowColumns.fromJSON(parsed);
       case OperationType.SELECT:
         return SelectQuery.fromJSON(parsed);
       case OperationType.DELETE:
@@ -735,6 +760,16 @@ const values = (data: Record<string, any>[]): SelectQuery => {
 };
 
 export const Query = {
+  createTable: (name: string, options?: { ifNotExists?: boolean }) =>
+    new CreateTable(name, options),
+  dropTable: (name: string, options?: { ifExists?: boolean }) =>
+    new DropTable(name, options),
+  alterTable: (name: string, options?: { ifExists?: boolean }) =>
+    new AlterTable(name, options),
+  showSchemas: () => new ShowSchemas(),
+  showTables: (options?: { schema?: string }) => new ShowTables(options),
+  describeTable: (name: string) => new DescribeTable(name),
+  showColumns: (name: string) => new ShowColumns(name),
   table: (source: TableSource, alias?: string) => new Table(source, alias),
   select: () => {
     return new SelectQuery();

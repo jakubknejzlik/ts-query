@@ -1,3 +1,5 @@
+import { CreateTable, AlterTable } from "./DDL";
+import { SchemaNode } from "./SchemaNode";
 import {
   Condition,
   BinaryCondition,
@@ -27,6 +29,7 @@ import { CreateViewAsSelect } from "./CreateViewAsSelect";
 import { MetadataOperationType } from "./interfaces";
 
 export type GuardQuery =
+  | SchemaNode
   | SelectQuery
   | InsertMutation
   | UpdateMutation
@@ -195,6 +198,20 @@ export function walk(query: GuardQuery, visitor: QueryVisitor): void {
         depth
       );
       visit(node.getSelect(), depth + 1);
+    } else if (node instanceof SchemaNode) {
+      node
+        .getTableNames()
+        .forEach((name) => visitor.onTable?.(name, undefined, depth));
+      if (node instanceof CreateTable)
+        node.getColumns().forEach((c) => column(c.name));
+      if (node instanceof AlterTable) {
+        const action = node.getAction();
+        if (action?.kind === "addColumn") column(action.column.name);
+        else if (action) {
+          column(action.name);
+          if (action.kind === "renameColumn") column(action.newName);
+        }
+      }
     } else {
       const kind: MutationKind =
         node instanceof InsertMutation

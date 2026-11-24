@@ -218,6 +218,218 @@ The version applies to the whole tree, so children need no version member.
 other explicit version with `DeserializeError("unsupported_version")`.
 Default `serialize()` and `toJSON()` retain the legacy format and bytes.
 
+## DuckDB, typed DDL and introspection
+
+```ts
+import { Q, T, L, flavorCapabilities } from "@jakub.knejzlik/ts-query";
+
+const query = Q.select().field("id").from("events").limit(10).offset(2);
+query.toSQL(Q.flavors.duckdb);
+// SELECT "id" FROM "events" LIMIT 10 OFFSET 2
+query.toSQLWithBindings(Q.flavors.duckdb);
+// { sql: 'SELECT "id" FROM "events" LIMIT $1 OFFSET $2', bindings: [10, 2] }
+
+const create = Q.createTable("events", { ifNotExists: true })
+  .column("id", T.int64(), { nullable: false, primaryKey: true })
+  .column("label", T.string(), { default: L.string("untitled") })
+  .column("amount", T.decimal(18, 2))
+  .column("active", T.boolean(), { default: L.boolean(true) });
+create.toSQL(Q.flavors.duckdb);
+Q.alterTable("events")
+  .addColumn("created", T.timestamp())
+  .toSQL(Q.flavors.duckdb);
+Q.alterTable("events").renameColumn("label", "name").toSQL(Q.flavors.duckdb);
+Q.alterTable("events").dropColumn("amount").toSQL(Q.flavors.duckdb);
+Q.dropTable("events", { ifExists: true }).toSQL(Q.flavors.duckdb);
+
+flavorCapabilities.duckdb.operations.includes("addColumn"); // true
+Q.flavors.duckdb.capabilities.types.includes("uuid"); // true
+```
+
+DuckDB uses double-quoted identifiers (embedded `"` becomes `""`), single-quoted
+strings, one-based `$1`, `$2`, … placeholders, LIMIT/OFFSET, native ILIKE,
+boolean literals, and TIMESTAMP literals for JavaScript Dates. Dates use the
+existing flavor timezone option and wall-clock formatting. YEAR/MONTH use
+EXTRACT, IF uses CASE, IFNULL uses COALESCE, and DATEADD uses a validated interval;
+other function names follow existing flavors' pass-through convention.
+
+The new builders return copies. `CreateTable`, `DropTable`, and `AlterTable`
+implement `toSQL`, `toJSON`, `serialize`, `clone`, `getOperationType`, and
+`getTableNames`. Typed accessors include `getTableName`, `getColumns`, `getAction`,
+`getIfExists`, and `getIfNotExists` where applicable. `walk` and `summarize` also
+support these nodes. Each ALTER node represents exactly one action; requesting a
+second action throws. Empty CREATE/ALTER builders cannot render or serialize.
+Flags can also be set with `.ifNotExists()` / `.ifExists()`; ALTER's `ifExists`
+refers to the table, not the column.
+
+Types are closed tagged objects made by `T.boolean()`, `T.int32()`, `T.int64()`,
+`T.float64()`, `T.decimal(precision, scale)`, `T.string()`, `T.date()`,
+`T.timestamp()`, `T.timestamptz()`, `T.json()`, and `T.uuid()`.
+Decimals require integer precision 1–38 and scale 0–precision (MySQL scale ≤30).
+No type accepts a raw SQL string. Defaults accept only `L.null()`,
+`L.boolean(value)`, `L.number(finiteNumber)`, and `L.string(value)`; expression
+nodes and raw SQL are rejected. Numbers retain JavaScript number precision;
+large exact int64/decimal defaults are deferred. The database checks default/type
+compatibility and existing-data constraints when executing. DDL defaults are
+escaped inline constants, including with `toSQLWithBindings`; PostgreSQL uses
+explicit escape strings for backslash-containing defaults, independent of
+`standard_conforming_strings`. Introspection filters support bindings. There
+are no runtime database dependencies.
+
+New schema AST identifiers always pass the existing identifier grammar with
+additional restrictions: tables may be `name` or `schema.name`, columns and schema
+filters are unqualified, and `*`, `@`, SQL punctuation, and quotes are rejected.
+Validated components are always quoted, including names such as `NULL`. Duplicate
+columns (case-insensitive), multiple column primary keys, nullable primary keys,
+and NULL defaults on non-null columns are rejected. These restrictions apply only
+to the new nodes; existing SELECT/CTAS/CVAS identifier behavior is unchanged.
+
+### Capability matrix
+
+The frozen, exported `flavorCapabilities` matrix is also available through each
+built-in flavor's optional `capabilities` member. Custom `ISQLFlavor`
+implementations need no changes: omission disables new DDL/introspection.
+Unsupported operations, types, flags, or options throw `UnsupportedOperationError`
+with stable `code: "unsupported_operation"` and an `operation` field. Nothing is
+silently discarded. The matrix describes this library's supported slice, not every
+feature of the underlying database.
+
+| Capability                            | DuckDB (tested 2.0) | PostgreSQL      | SQLite (3.35+)                          | MySQL (8.0+)                     | Timestream |
+| ------------------------------------- | ------------------- | --------------- | --------------------------------------- | -------------------------------- | ---------- |
+| CREATE / DROP TABLE                   | Yes                 | Yes             | Yes                                     | Yes                              | No         |
+| ADD / DROP / RENAME COLUMN            | Yes                 | Yes             | Yes                                     | Yes                              | No         |
+| CREATE IF NOT EXISTS / DROP IF EXISTS | Yes                 | Yes             | Yes                                     | Yes                              | No         |
+| ALTER TABLE IF EXISTS                 | Yes                 | Yes             | No                                      | No                               | No         |
+| Types                                 | All `T` types       | All `T` types   | boolean, int32, int64, float64, string  | All except timestamptz, uuid     | None       |
+| CREATE nullable / typed default       | Yes                 | Yes             | Yes                                     | Yes, defaults except string/json | No         |
+| CREATE single-column PK               | All types           | All except json | All supported types                     | All except string/json           | No         |
+| ADD nullable / typed default          | Yes                 | Yes             | Yes, NOT NULL requires non-null default | Yes, defaults except string/json | No         |
+| ADD single-column PK                  | No                  | All except json | No                                      | All except string/json           | No         |
+| All four introspection requests       | Yes                 | Yes             | No                                      | No                               | No         |
+
+`T.string()` renders VARCHAR in DuckDB and TEXT in PostgreSQL/SQLite/MySQL;
+`T.float64()` renders DOUBLE, DOUBLE PRECISION, REAL, and DOUBLE respectively.
+MySQL timestamps render DATETIME, without automatic initialization. SQLite uses
+its ordinary affinity model: int32/int64 both render INTEGER, and boolean renders
+BOOLEAN; widths and boolean domains are not enforced. INTEGER PRIMARY KEY has
+SQLite's normal rowid semantics. SQLite temporal/decimal/json/uuid types are
+conservatively unsupported. MySQL TEXT/JSON literal defaults and primary keys are
+conservatively unsupported; string defaults containing backslashes on other types
+also throw because their interpretation depends on `sql_mode`.
+
+Support is checked against the documented syntax for
+[DuckDB CREATE](https://duckdb.org/docs/2.0/sql/statements/create_table),
+[DuckDB ALTER](https://duckdb.org/docs/2.0/sql/statements/alter_table),
+[PostgreSQL CREATE](https://www.postgresql.org/docs/current/sql-createtable.html),
+[PostgreSQL ALTER](https://www.postgresql.org/docs/current/sql-altertable.html),
+[SQLite CREATE](https://www.sqlite.org/lang_createtable.html),
+[SQLite ALTER](https://www.sqlite.org/lang_altertable.html),
+[MySQL CREATE](https://dev.mysql.com/doc/refman/8.4/en/create-table.html),
+[MySQL ALTER](https://dev.mysql.com/doc/refman/8.4/en/alter-table.html), and
+[MySQL defaults](https://dev.mysql.com/doc/refman/8.4/en/data-type-defaults.html).
+Generated SQL is unit-tested for every supported flavor. DuckDB and PostgreSQL
+also have in-memory execution tests; MySQL has no execution adapter in this repo.
+The DuckDB devDependency uses platform-specific prebuilt Node-API binaries;
+loading/querying was verified on Node 20, 22, 24, 25 and 26 on macOS arm64.
+
+### Introspection is a request; execution is the consumer's job
+
+```ts
+const schemas = Q.showSchemas();
+const tables = Q.showTables({ schema: "main" }); // schema is optional
+const description = Q.describeTable("main.events");
+const columns = Q.showColumns("main.events");
+
+columns.toJSON(); // { type: "ShowColumns", tableName: "main.events" }
+columns.getTableName(); // "main.events"
+tables.getSchema(); // "main"
+columns.toSQL(Q.flavors.duckdb); // an information_schema.columns SELECT
+```
+
+`ShowSchemas`, `ShowTables`, `DescribeTable`, and `ShowColumns` are distinct
+serializable node classes with `clone`, typed accessors, and a plain `toJSON()`
+request shape. DuckDB and PostgreSQL render information_schema queries:
+ShowSchemas returns `schema_name`; ShowTables returns `table_schema`, `table_name`,
+and `table_type` (including views); DescribeTable and ShowColumns both return
+`column_name`, `data_type`, `is_nullable`, `column_default`, and `ordinal_position`,
+ordered by column position. Tables/columns are restricted to `current_database()`
+and the supplied schema or `current_schema()`; schema listing covers visible
+schemas. Catalog contents and permissions determine the results.
+See [DuckDB information_schema](https://duckdb.org/docs/2.0/sql/meta/information_schema)
+and [PostgreSQL columns](https://www.postgresql.org/docs/current/infoschema-columns.html).
+
+**ts-query does not execute SQL or contact a registry.** A consumer can inspect
+`instanceof ShowColumns` or the JSON `type` and answer from its own logical
+registry without rendering SQL at all. Authorization, name resolution, execution,
+and the response format belong to that consumer. Introspection is not a promise
+that a physical table exists. `DescribeTable` describes columns, not indexes or
+all constraints.
+
+### Allowlisting untrusted schema requests
+
+```ts
+const request = Q.showColumns("main.events").serialize({ version: 1 });
+const node = Q.deserialize(request, {
+  allowedNodes: ["ShowColumns"],
+  allowRaw: false,
+  functions: [],
+  maxDepth: 0,
+});
+// Authorize node.getTableNames() or inspect node.toJSON(), then answer/render.
+
+const ddl = create.serialize({ version: 1, compress: true });
+Q.deserialize(ddl, { allowedNodes: ["CreateTable"], allowRaw: false });
+// Q.deserialize(ddl) throws DeserializeError with code "node_not_allowed".
+```
+
+`allowedNodes?: string[]` is an exact, case-sensitive allowlist of **query node
+kinds** at every query edge: `SelectQuery`, `InsertMutation`, `UpdateMutation`,
+`DeleteMutation`, existing `ctas`/`cvas`, and the exported `schemaNodeKinds`
+(`CreateTable`, `DropTable`, `AlterTable`, `ShowSchemas`, `ShowTables`,
+`DescribeTable`, `ShowColumns`). Conditions, expressions and tables continue to use
+the existing `allowRaw`, `functions`, identifier, and depth guards. An empty
+allowlist denies all query nodes. For example, CTAS requires both `ctas` and
+`SelectQuery`. Omission keeps existing kinds permissive, while **new DDL and
+introspection nodes always require explicit inclusion**, even with `allowRaw: true`.
+
+New nodes always validate every field and reject unknown properties at the
+root, column, type, options, default, and ALTER-action levels. Their public
+`fromJSON` factories also validate structure; those factories are trusted AST
+construction entry points, not authorization gates. Only `Q.deserialize` enforces
+`allowedNodes`. Supported wire versions remain unversioned and `v: 1`, including
+compression. No version bump or change to existing serialization encodings is
+introduced. Rejections use `DeserializeError` codes `node_not_allowed`,
+`invalid_node`, and `unsupported_version`; the existing guard codes and semantics
+remain unchanged. Allowlisting a node kind does not authorize a table or operation
+for a particular user; apply your application's policy before execution.
+
+### Completed / Deferred
+
+Completed:
+
+- DuckDB flavor: quoting, `$n` bindings, LIMIT/OFFSET, ILIKE, literals, and existing function conventions.
+- Typed CREATE/DROP TABLE and single-action ADD/DROP/RENAME COLUMN, column nullability, single-column PK, typed literal defaults, and table existence flags, gated by the capability matrix.
+- Closed column types, immutable accessors/JSON, legacy/v1/compressed round trips, and schema support in `walk`/`summarize`.
+- Four declarative introspection nodes with DuckDB/PostgreSQL rendering and consumer-owned execution.
+- Deny-by-default schema deserialization, query-kind allowlists, strict new-node fields/identifiers/types, and preserved existing guards.
+- SQL/rejection tests per flavor and in-memory DuckDB/PostgreSQL execution tests.
+
+Deferred:
+
+- Indexes; composite PKs and constraints beyond single-column PK; ALTER COLUMN TYPE; multiple ALTER actions per node; column-level IF EXISTS/IF NOT EXISTS.
+- Iceberg-specific DDL; showRelations; introspection rendering for SQLite/MySQL/Timestream; registry/database execution in the library.
+- Raw types/fragments, expression defaults, exact bigint/decimal literal defaults, extra SQLite type mappings, and MySQL TEXT/JSON defaults/PKs or timezone/UUID mappings.
+- MySQL execution tests and cross-platform CI execution verification of the DuckDB prebuilt package (local macOS arm64 Node 20–26 checks are included in development evidence).
+
+### Breaking changes
+
+**None.** Existing public exports, required `ISQLFlavor` members, CTAS/CVAS API,
+SQL/serialization, v1 format, and default deserialization behavior for existing
+node types are preserved. New-only edges: schema requests require an explicit
+allowlist, strict schema validation rejects malformed/unknown fields, and absent
+capabilities or unsupported features throw. DuckDB's new DATEADD renderer requires
+a safe integer amount; existing flavors retain their behavior.
+
 ## Testing
 
 Run the test suite using the `test` script:

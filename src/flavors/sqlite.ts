@@ -1,8 +1,10 @@
+import { FlavorCapabilities, flavorCapabilities } from "../capabilities";
 import { ISequelizableOptions } from "../interfaces";
 import { ExpressionBase, FunctionExpression } from "../Expression";
 import { MySQLFlavor } from "./mysql";
 
 export class SQLiteFlavor extends MySQLFlavor {
+  readonly capabilities: FlavorCapabilities = flavorCapabilities.sqlite;
   // protected columnQuotes: string = "'"
   protected stringQuotes: string = "'";
   escapeFunction(

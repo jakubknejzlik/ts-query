@@ -1,4 +1,6 @@
+import { isSchemaNodeKind, validateSchemaNode } from "./schema-validation";
 export type DeserializeErrorCode =
+  | "node_not_allowed"
   | "raw_not_allowed"
   | "function_not_allowed"
   | "max_depth_exceeded"
@@ -16,6 +18,8 @@ export class DeserializeError extends Error {
 }
 
 export interface DeserializeOptions {
+  /** Exact query node kinds, checked at every query edge. New schema nodes require explicit inclusion. */
+  allowedNodes?: string[];
   allowRaw?: boolean;
   /** Case-insensitive function names. Omitted means unrestricted; [] denies all. */
   functions?: string[];
@@ -66,6 +70,16 @@ export function validateSerializedQuery(
   ) {
     invalid("functions must be an array of names");
   }
+  if (
+    options.allowedNodes !== undefined &&
+    (!Array.isArray(options.allowedNodes) ||
+      options.allowedNodes.some((x) => typeof x !== "string"))
+  )
+    invalid("allowedNodes must be an array of node names");
+  const allowedNodes =
+    options.allowedNodes === undefined
+      ? undefined
+      : new Set(options.allowedNodes);
   const functions =
     options.functions && new Set(options.functions.map((x) => x.toUpperCase()));
   type Task = {
@@ -223,6 +237,21 @@ export function validateSerializedQuery(
         default:
           invalid("Unknown condition node");
       }
+      continue;
+    }
+    if (allowedNodes && !allowedNodes.has(node.type))
+      throw new DeserializeError(
+        "node_not_allowed",
+        `Node not allowed: ${node.type}`
+      );
+    if (isSchemaNodeKind(node.type)) {
+      if (!allowedNodes?.has(node.type))
+        throw new DeserializeError(
+          "node_not_allowed",
+          `Schema node requires explicit allowlist: ${node.type}`
+        );
+      if (kind === "select") invalid("Expected a SELECT subquery");
+      validateSchemaNode(node);
       continue;
     }
     if (kind === "select" && node.type !== "SelectQuery")

@@ -1,3 +1,4 @@
+import type { FlavorCapabilities } from "./capabilities";
 import { ISequelizableOptions } from "./interfaces";
 import {
   ExpressionBase,
@@ -9,6 +10,8 @@ import {
 import { UnionType } from "./Query";
 
 export interface ISQLFlavor {
+  /** Omission safely disables typed DDL and introspection rendering. */
+  readonly capabilities?: FlavorCapabilities;
   /** One-based placeholder index; defaults to `?` when omitted. */
   parameterPlaceholder?(index: number): string;
   /** Used by the binding renderer for flavor-specific literal syntax. */

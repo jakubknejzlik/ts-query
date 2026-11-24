@@ -63,3 +63,31 @@ export type {
   QueryColumn,
   QuerySummary,
 } from "./visitor";
+
+export { DuckDBFlavor } from "./flavors/duckdb";
+export { CreateTable, DropTable, AlterTable } from "./DDL";
+export type { AlterTableAction } from "./DDL";
+export {
+  ShowSchemas,
+  ShowTables,
+  DescribeTable,
+  ShowColumns,
+} from "./Introspection";
+export { T, L } from "./ddl-types";
+export type {
+  ColumnType,
+  ColumnTypeName,
+  ColumnOptions,
+  ColumnDefinition,
+  DdlLiteral,
+} from "./ddl-types";
+export { flavorCapabilities, UnsupportedOperationError } from "./capabilities";
+export type {
+  FlavorCapabilities,
+  DdlOperation,
+  IntrospectionOperation,
+  ColumnOptionName,
+} from "./capabilities";
+export { schemaNodeKinds } from "./schema-validation";
+export type { SchemaNodeKind } from "./schema-validation";
+export { OperationType } from "./interfaces";
