@@ -62,6 +62,13 @@ export enum MetadataOperationType {
   DELETE = "delete",
   CREATE_TABLE_AS = "ctas",
   CREATE_VIEW_AS = "cvas",
+  CREATE_TABLE = "create_table",
+  DROP_TABLE = "drop_table",
+  ALTER_TABLE = "alter_table",
+  SHOW_SCHEMAS = "show_schemas",
+  SHOW_TABLES = "show_tables",
+  DESCRIBE_TABLE = "describe_table",
+  SHOW_COLUMNS = "show_columns",
 }
 export enum OperationType {
   SELECT = "SelectQuery",
@@ -70,6 +77,13 @@ export enum OperationType {
   DELETE = "DeleteMutation",
   CREATE_TABLE_AS = "ctas",
   CREATE_VIEW_AS = "cvas",
+  CREATE_TABLE = "create_table",
+  DROP_TABLE = "drop_table",
+  ALTER_TABLE = "alter_table",
+  SHOW_SCHEMAS = "show_schemas",
+  SHOW_TABLES = "show_tables",
+  DESCRIBE_TABLE = "describe_table",
+  SHOW_COLUMNS = "show_columns",
 }
 
 export interface IMetadata {

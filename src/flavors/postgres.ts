@@ -1,3 +1,4 @@
+import { FlavorCapabilities, flavorCapabilities } from "../capabilities";
 import { ISequelizableOptions } from "../interfaces";
 import {
   ExpressionBase,
@@ -9,6 +10,7 @@ import {
 import { DefaultFlavor } from "./default";
 
 export class PostgresFlavor extends DefaultFlavor {
+  readonly capabilities: FlavorCapabilities = flavorCapabilities.postgres;
   /** @internal Installed on the per-render flavor by the binding renderer. */
   onBindingCast?: (placeholder: string, cast: string) => void;
 

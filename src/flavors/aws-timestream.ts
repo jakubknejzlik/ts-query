@@ -1,3 +1,4 @@
+import { flavorCapabilities } from "../capabilities";
 import { ISequelizableOptions } from "../interfaces";
 import {
   ExpressionBase,
@@ -7,6 +8,7 @@ import {
 import { DefaultFlavor } from "./default";
 
 export class AWSTimestreamFlavor extends DefaultFlavor {
+  readonly capabilities = flavorCapabilities.awsTimestream;
   /** @internal Installed on the per-render flavor by the binding renderer. */
   onBindingCast?: (placeholder: string, cast: string) => void;
 
