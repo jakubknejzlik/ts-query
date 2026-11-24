@@ -14,7 +14,7 @@ describe("Declarative introspection", () => {
     const flavor = Q.flavors[name];
     it(`renders every introspection request for ${name}`, () => {
       expect(Q.showSchemas().toSQL(flavor)).toBe(
-        "SELECT schema_name FROM information_schema.schemata ORDER BY schema_name"
+        "SELECT schema_name FROM information_schema.schemata WHERE catalog_name = current_database() ORDER BY schema_name"
       );
       expect(Q.showTables().toSQL(flavor)).toBe(
         "SELECT table_schema, table_name, table_type FROM information_schema.tables WHERE table_catalog = current_database() AND table_schema = current_schema() ORDER BY table_name"
@@ -76,33 +76,33 @@ describe("Declarative introspection", () => {
       }
   });
   it("exposes plain request data for consumers without execution or registry access", () => {
-    expect(Q.showSchemas().toJSON()).toEqual({ type: "ShowSchemas" });
+    expect(Q.showSchemas().toJSON()).toEqual({ type: "show_schemas" });
     expect(Q.showTables({ schema: "app" }).getSchema()).toBe("app");
     expect(Q.describeTable("app.items").getTableName()).toBe("app.items");
     expect(Q.showColumns("items").toJSON()).toEqual({
-      type: "ShowColumns",
+      type: "show_columns",
       tableName: "items",
     });
     expect(summarize(Q.describeTable("items"))).toMatchObject({
       tables: ["items"],
-      kind: "DescribeTable",
+      kind: "describe_table",
       hasRaw: false,
     });
-    expect(ShowSchemas.fromJSON({ type: "ShowSchemas" })).toBeInstanceOf(
+    expect(ShowSchemas.fromJSON({ type: "show_schemas" })).toBeInstanceOf(
       ShowSchemas
     );
     expect(
-      ShowTables.fromJSON({ type: "ShowTables", schema: "app" }).getSchema()
+      ShowTables.fromJSON({ type: "show_tables", schema: "app" }).getSchema()
     ).toBe("app");
     expect(
       DescribeTable.fromJSON({
-        type: "DescribeTable",
+        type: "describe_table",
         tableName: "t",
       }).getTableName()
     ).toBe("t");
     expect(
       ShowColumns.fromJSON({
-        type: "ShowColumns",
+        type: "show_columns",
         tableName: "t",
       }).getTableName()
     ).toBe("t");

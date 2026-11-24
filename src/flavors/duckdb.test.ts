@@ -12,7 +12,7 @@ describe("DuckDBFlavor", () => {
       '"a""; DROP TABLE x;--"'
     );
     expect(
-      Q.select().field('a"; DROP TABLE x;--').from("items").toSQL(flavor)
+      Q.select().field(Q.column('a"; DROP TABLE x;--')).from("items").toSQL(flavor)
     ).toBe('SELECT "a""; DROP TABLE x;--" FROM "items"');
   });
   it("renders a SELECT with predicates, ordering, limits and one-based parameters", () => {
@@ -34,6 +34,23 @@ describe("DuckDBFlavor", () => {
     });
     expect(Q.select().from("t").offset(2).toSQL(flavor)).toBe(
       'SELECT * FROM "t" OFFSET 2'
+    );
+  });
+  it("preserves legacy expressions while quoting strict identifiers", () => {
+    expect(Q.select().field("-amount").from("items").toSQL(flavor)).toBe(
+      'SELECT -"amount" FROM "items"'
+    );
+    for (const expression of ["NULL", "+0", "-1", "COUNT(*)"])
+      expect(Q.expr(expression).toSQL(flavor)).toBe(expression);
+    for (const name of ["NULL", "+0", "-1", "-amount", "COUNT(*)", "TRUE"])
+      expect(flavor.escapeColumn(name, false)).toBe(`"${name}"`);
+    expect(
+      Fn.priceCurrentAndPreviousDiffField({
+        thisYearColumn: "current_price",
+        lastYearColumn: "previous_price",
+      }).toSQL(flavor)
+    ).toBe(
+      'CASE WHEN ("current_price" = 0 AND "previous_price" = 0) THEN +0 ELSE CASE WHEN "previous_price" = 0 THEN NULL ELSE CASE WHEN "current_price" = 0 THEN -1 ELSE (("current_price" - "previous_price") / ABS("previous_price")) END END END'
     );
   });
   it("renders literals, NULLs and mutations", () => {

@@ -10,6 +10,7 @@ import {
   ShowTables,
   Cond,
   Fn,
+  summarize,
 } from "./index";
 
 const fails = (node: unknown, code: string, options?: DeserializeOptions) => {
@@ -37,6 +38,33 @@ const create = () =>
       .serialize({ version: 1 })
   );
 describe("Schema deserialization guard", () => {
+  it.each([
+    [Q.createTable("t").column("c", T.int32()), "create_table"],
+    [Q.dropTable("t"), "drop_table"],
+    [Q.alterTable("t").dropColumn("c"), "alter_table"],
+    [Q.showSchemas(), "show_schemas"],
+    [Q.showTables(), "show_tables"],
+    [Q.describeTable("t"), "describe_table"],
+    [Q.showColumns("t"), "show_columns"],
+  ] as const)(
+    "uses snake_case metadata, wire kinds and allowlists for %s",
+    (node, kind) => {
+      expect(node.getOperationType()).toBe(kind);
+      expect(node.toJSON().type).toBe(kind);
+      expect(schemaNodeKinds).toContain(kind);
+      for (const compress of [false, true])
+        for (const version of [undefined, 1] as const) {
+          const input = node.serialize({ compress, version });
+          const copy = Q.deserialize(input, { ...allow, allowedNodes: [kind] });
+          expect(copy).toEqual(node);
+          expect(summarize(copy).kind).toBe(kind);
+          fails(input, "node_not_allowed", {
+            ...allow,
+            allowedNodes: [node.constructor.name],
+          });
+        }
+    }
+  );
   it("denies every DDL and introspection kind unless explicitly allowlisted, including compressed payloads", () => {
     for (const node of [
       Q.createTable("t").column("c", T.int32()),
@@ -80,11 +108,11 @@ describe("Schema deserialization guard", () => {
     ).toContain(" AS SELECT");
     const wire = JSON.parse(Q.select().from("t").serialize());
     wire.tables[0].source = {
-      type: "DropTable",
+      type: "drop_table",
       tableName: "t",
       ifExists: false,
     };
-    fails(wire, "invalid_node", { allowedNodes: ["SelectQuery", "DropTable"] });
+    fails(wire, "invalid_node", { allowedNodes: ["SelectQuery", "drop_table"] });
     for (const value of ["SelectQuery", [1], null])
       fails(select.serialize(), "invalid_node", { allowedNodes: value } as any);
   });
@@ -200,23 +228,23 @@ describe("Schema deserialization guard", () => {
       fails({ type, v: "1" }, "unsupported_version", allow);
     }
     for (const node of [
-      { type: "DropTable", tableName: "t", ifExists: 1 },
+      { type: "drop_table", tableName: "t", ifExists: 1 },
       {
-        type: "AlterTable",
+        type: "alter_table",
         tableName: "t",
         ifExists: false,
         action: { kind: "alterColumnType", name: "c", dataType: T.int32() },
       },
       {
-        type: "AlterTable",
+        type: "alter_table",
         tableName: "t",
         ifExists: false,
         action: { kind: "renameColumn", name: "c", newName: "*" },
       },
-      { type: "AlterTable", tableName: "t", ifExists: false },
-      { type: "ShowTables", schema: "a.b" },
-      { type: "DescribeTable", tableName: "*" },
-      { type: "ShowColumns" },
+      { type: "alter_table", tableName: "t", ifExists: false },
+      { type: "show_tables", schema: "a.b" },
+      { type: "describe_table", tableName: "*" },
+      { type: "show_columns" },
     ])
       fails(node, "invalid_node", allow);
   });
@@ -226,14 +254,14 @@ describe("Schema deserialization guard", () => {
     );
     expect(() =>
       AlterTable.fromJSON({
-        type: "AlterTable",
+        type: "alter_table",
         tableName: "t",
         ifExists: false,
         action: { kind: "raw", sql: "x" },
       })
     ).toThrow(DeserializeError);
     expect(() =>
-      ShowTables.fromJSON({ type: "ShowTables", schema: "*" })
+      ShowTables.fromJSON({ type: "show_tables", schema: "*" })
     ).toThrow(DeserializeError);
   });
   it("preserves legacy CTAS/CVAS bytes, permissive defaults and guard semantics", () => {

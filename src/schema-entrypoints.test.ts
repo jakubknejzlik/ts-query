@@ -18,7 +18,7 @@ describe("Schema module initialization", () => {
   it("loads the introspection module independently without a circular base class", () => {
     jest.isolateModules(() => {
       const { ShowSchemas } = require("./Introspection");
-      expect(new ShowSchemas().serialize()).toBe('{"type":"ShowSchemas"}');
+      expect(new ShowSchemas().serialize()).toBe('{"type":"show_schemas"}');
     });
   });
 });

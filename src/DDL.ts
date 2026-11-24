@@ -125,7 +125,7 @@ function columnSQL(
     if (key === "primaryKey" && options.primaryKey === false) continue;
     requireOption(
       supportedOptions.includes(key as any),
-      `${adding ? "addColumn" : "CreateTable"}.${key}`
+      `${adding ? "addColumn" : "create_table"}.${key}`
     );
   }
   if (options.primaryKey)
@@ -235,7 +235,7 @@ export class CreateTable extends DdlNode {
   }
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
     validateSchemaNode(this.toJSON());
-    const caps = requireCapability(flavor, "CreateTable");
+    const caps = requireCapability(flavor, "create_table");
     if (this.flag)
       requireOption(caps.createIfNotExists, "CreateTable.ifNotExists");
     return `CREATE TABLE ${this.flag ? "IF NOT EXISTS " : ""}${identifierSQL(
@@ -295,7 +295,7 @@ export class DropTable extends DdlNode {
   }
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
     validateSchemaNode(this.toJSON());
-    const caps = requireCapability(flavor, "DropTable");
+    const caps = requireCapability(flavor, "drop_table");
     if (this.flag) requireOption(caps.dropIfExists, "DropTable.ifExists");
     return `DROP TABLE ${this.flag ? "IF EXISTS " : ""}${identifierSQL(
       this.tableName,

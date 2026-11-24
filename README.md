@@ -251,7 +251,18 @@ strings, one-based `$1`, `$2`, … placeholders, LIMIT/OFFSET, native ILIKE,
 boolean literals, and TIMESTAMP literals for JavaScript Dates. Dates use the
 existing flavor timezone option and wall-clock formatting. YEAR/MONTH use
 EXTRACT, IF uses CASE, IFNULL uses COALESCE, and DATEADD uses a validated interval;
-other function names follow existing flavors' pass-through convention.
+other function names follow existing flavors' pass-through convention. Legacy
+expressions such as unary minus, `NULL`, `+0`, and `-1` retain base-flavor parsing,
+including in `Fn.priceCurrentAndPreviousDiffField`. Pass-through function names
+must be supported by DuckDB; they are not all translated for compatibility.
+Use `Q.column(name)` for strict identifier quoting; plain field strings and
+`Q.expr(...)` use legacy expression parsing.
+
+**Security:** Untrusted payloads rendered for DuckDB must be deserialized with a
+`functions` allowlist and `allowRaw: false`. DuckDB table functions such as
+`read_text` and `read_csv` can access files and network resources. Allow only
+functions your application intends to expose; omitting `functions` leaves function
+names unrestricted.
 
 The new builders return copies. `CreateTable`, `DropTable`, and `AlterTable`
 implement `toSQL`, `toJSON`, `serialize`, `clone`, `getOperationType`, and
@@ -340,7 +351,7 @@ const tables = Q.showTables({ schema: "main" }); // schema is optional
 const description = Q.describeTable("main.events");
 const columns = Q.showColumns("main.events");
 
-columns.toJSON(); // { type: "ShowColumns", tableName: "main.events" }
+columns.toJSON(); // { type: "show_columns", tableName: "main.events" }
 columns.getTableName(); // "main.events"
 tables.getSchema(); // "main"
 columns.toSQL(Q.flavors.duckdb); // an information_schema.columns SELECT
@@ -352,9 +363,10 @@ request shape. DuckDB and PostgreSQL render information_schema queries:
 ShowSchemas returns `schema_name`; ShowTables returns `table_schema`, `table_name`,
 and `table_type` (including views); DescribeTable and ShowColumns both return
 `column_name`, `data_type`, `is_nullable`, `column_default`, and `ordinal_position`,
-ordered by column position. Tables/columns are restricted to `current_database()`
-and the supplied schema or `current_schema()`; schema listing covers visible
-schemas. Catalog contents and permissions determine the results.
+ordered by column position. Schema, table, and column listings are restricted to
+`current_database()`. Tables/columns also use the supplied schema or
+`current_schema()`; schema listing covers visible schemas in that catalog.
+Catalog contents and permissions determine the results.
 See [DuckDB information_schema](https://duckdb.org/docs/2.0/sql/meta/information_schema)
 and [PostgreSQL columns](https://www.postgresql.org/docs/current/infoschema-columns.html).
 
@@ -370,7 +382,7 @@ all constraints.
 ```ts
 const request = Q.showColumns("main.events").serialize({ version: 1 });
 const node = Q.deserialize(request, {
-  allowedNodes: ["ShowColumns"],
+  allowedNodes: ["show_columns"],
   allowRaw: false,
   functions: [],
   maxDepth: 0,
@@ -378,15 +390,17 @@ const node = Q.deserialize(request, {
 // Authorize node.getTableNames() or inspect node.toJSON(), then answer/render.
 
 const ddl = create.serialize({ version: 1, compress: true });
-Q.deserialize(ddl, { allowedNodes: ["CreateTable"], allowRaw: false });
+Q.deserialize(ddl, { allowedNodes: ["create_table"], allowRaw: false });
 // Q.deserialize(ddl) throws DeserializeError with code "node_not_allowed".
 ```
 
 `allowedNodes?: string[]` is an exact, case-sensitive allowlist of **query node
 kinds** at every query edge: `SelectQuery`, `InsertMutation`, `UpdateMutation`,
 `DeleteMutation`, existing `ctas`/`cvas`, and the exported `schemaNodeKinds`
-(`CreateTable`, `DropTable`, `AlterTable`, `ShowSchemas`, `ShowTables`,
-`DescribeTable`, `ShowColumns`). Conditions, expressions and tables continue to use
+(`create_table`, `drop_table`, `alter_table`, `show_schemas`, `show_tables`,
+`describe_table`, `show_columns`). These snake_case values also identify the new
+`MetadataOperationType` members returned by `getOperationType()` and `summarize().kind`.
+Conditions, expressions and tables continue to use
 the existing `allowRaw`, `functions`, identifier, and depth guards. An empty
 allowlist denies all query nodes. For example, CTAS requires both `ctas` and
 `SelectQuery`. Omission keeps existing kinds permissive, while **new DDL and
@@ -407,7 +421,7 @@ for a particular user; apply your application's policy before execution.
 
 Completed:
 
-- DuckDB flavor: quoting, `$n` bindings, LIMIT/OFFSET, ILIKE, literals, and existing function conventions.
+- DuckDB flavor: quoting, `$n` bindings, LIMIT/OFFSET, ILIKE, literals, legacy expression parsing, and the function translations described above.
 - Typed CREATE/DROP TABLE and single-action ADD/DROP/RENAME COLUMN, column nullability, single-column PK, typed literal defaults, and table existence flags, gated by the capability matrix.
 - Closed column types, immutable accessors/JSON, legacy/v1/compressed round trips, and schema support in `walk`/`summarize`.
 - Four declarative introspection nodes with DuckDB/PostgreSQL rendering and consumer-owned execution.
@@ -423,7 +437,11 @@ Deferred:
 
 ### Breaking changes
 
-**None.** Existing public exports, required `ISQLFlavor` members, CTAS/CVAS API,
+Type-level changes: the widened `MetadataOperationType` enum and `GuardQuery`
+union can break exhaustive `switch` statements (including `never` checks).
+Consumers must handle the new DDL and introspection cases.
+
+Existing public exports, required `ISQLFlavor` members, CTAS/CVAS API,
 SQL/serialization, v1 format, and default deserialization behavior for existing
 node types are preserved. New-only edges: schema requests require an explicit
 allowlist, strict schema validation rejects malformed/unknown fields, and absent

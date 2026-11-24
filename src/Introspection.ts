@@ -27,8 +27,8 @@ export class ShowSchemas extends IntrospectionNode {
     return { type: OperationType.SHOW_SCHEMAS };
   }
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
-    requireCapability(flavor, "ShowSchemas");
-    return "SELECT schema_name FROM information_schema.schemata ORDER BY schema_name";
+    requireCapability(flavor, "show_schemas");
+    return "SELECT schema_name FROM information_schema.schemata WHERE catalog_name = current_database() ORDER BY schema_name";
   }
   static fromJSON(node: any): ShowSchemas {
     validateSchemaNode(node);
@@ -62,7 +62,7 @@ export class ShowTables extends IntrospectionNode {
   }
   toSQL(flavor: ISQLFlavor = new MySQLFlavor()): string {
     validateSchemaNode(this.toJSON());
-    requireCapability(flavor, "ShowTables");
+    requireCapability(flavor, "show_tables");
     return (
       "SELECT table_schema, table_name, table_type FROM information_schema.tables WHERE table_catalog = current_database() AND table_schema = " +
       (this.schema === undefined

@@ -2,16 +2,16 @@ import type { ISQLFlavor } from "./Flavor";
 import type { ColumnTypeName } from "./ddl-types";
 
 export type DdlOperation =
-  | "CreateTable"
-  | "DropTable"
+  | "create_table"
+  | "drop_table"
   | "addColumn"
   | "dropColumn"
   | "renameColumn";
 export type IntrospectionOperation =
-  | "ShowSchemas"
-  | "ShowTables"
-  | "DescribeTable"
-  | "ShowColumns";
+  | "show_schemas"
+  | "show_tables"
+  | "describe_table"
+  | "show_columns";
 export type ColumnOptionName = "nullable" | "primaryKey" | "default";
 export interface FlavorCapabilities {
   readonly dialect: "duckdb" | "postgres" | "sqlite" | "mysql" | "none";
@@ -40,17 +40,17 @@ const types: ColumnTypeName[] = [
   "uuid",
 ];
 const ddl: DdlOperation[] = [
-  "CreateTable",
-  "DropTable",
+  "create_table",
+  "drop_table",
   "addColumn",
   "dropColumn",
   "renameColumn",
 ];
 const introspection: IntrospectionOperation[] = [
-  "ShowSchemas",
-  "ShowTables",
-  "DescribeTable",
-  "ShowColumns",
+  "show_schemas",
+  "show_tables",
+  "describe_table",
+  "show_columns",
 ];
 const options: ColumnOptionName[] = ["nullable", "primaryKey", "default"];
 function capabilities(value: FlavorCapabilities): FlavorCapabilities {

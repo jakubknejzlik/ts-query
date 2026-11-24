@@ -16,7 +16,8 @@ export class DuckDBFlavor extends DefaultFlavor {
   parameterPlaceholder(index: number): string {
     return `$${index}`;
   }
-  escapeColumn(name: string, _legacy?: boolean): string {
+  escapeColumn(name: string, legacyParsing?: boolean): string {
+    if (legacyParsing) return super.escapeColumn(name, true);
     return name
       .split(".")
       .map((part) => (part === "*" ? "*" : `"${part.replace(/"/g, '""')}"`))

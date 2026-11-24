@@ -7,13 +7,13 @@ import {
 } from "./ddl-types";
 
 export const schemaNodeKinds = Object.freeze([
-  "CreateTable",
-  "DropTable",
-  "AlterTable",
-  "ShowSchemas",
-  "ShowTables",
-  "DescribeTable",
-  "ShowColumns",
+  "create_table",
+  "drop_table",
+  "alter_table",
+  "show_schemas",
+  "show_tables",
+  "describe_table",
+  "show_columns",
 ] as const);
 export type SchemaNodeKind = (typeof schemaNodeKinds)[number];
 export function isSchemaNodeKind(kind: unknown): kind is SchemaNodeKind {
@@ -50,7 +50,7 @@ export function validateAction(value: any): void {
 export function validateSchemaNode(node: any): void {
   assertSerializationVersion(node);
   switch (node?.type) {
-    case "CreateTable":
+    case "create_table":
       ddlObject(node, ["v", "type", "tableName", "columns", "ifNotExists"]);
       ddlIdentifier(node.tableName, true);
       booleanFlag(node.ifNotExists);
@@ -65,26 +65,26 @@ export function validateSchemaNode(node: any): void {
       if (node.columns.filter((c) => c.options.primaryKey).length > 1)
         invalidDdl("Only a single column primary key is supported");
       break;
-    case "DropTable":
+    case "drop_table":
       ddlObject(node, ["v", "type", "tableName", "ifExists"]);
       ddlIdentifier(node.tableName, true);
       booleanFlag(node.ifExists);
       break;
-    case "AlterTable":
+    case "alter_table":
       ddlObject(node, ["v", "type", "tableName", "ifExists", "action"]);
       ddlIdentifier(node.tableName, true);
       booleanFlag(node.ifExists);
       validateAction(node.action);
       break;
-    case "ShowSchemas":
+    case "show_schemas":
       ddlObject(node, ["v", "type"]);
       break;
-    case "ShowTables":
+    case "show_tables":
       ddlObject(node, ["v", "type", "schema"]);
       if (node.schema !== undefined) ddlIdentifier(node.schema);
       break;
-    case "DescribeTable":
-    case "ShowColumns":
+    case "describe_table":
+    case "show_columns":
       ddlObject(node, ["v", "type", "tableName"]);
       ddlIdentifier(node.tableName, true);
       break;

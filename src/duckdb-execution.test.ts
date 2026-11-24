@@ -3,6 +3,69 @@ import { Q, T, L, Fn, Cond, DuckDBFlavor } from "./index";
 
 const flavor = new DuckDBFlavor({ timezone: "UTC" });
 describe("DuckDB generated SQL execution", () => {
+  it("executes every current/previous price difference branch with legacy literals", async () => {
+    const db = await DuckDBInstance.create(":memory:");
+    const connection = await db.connect();
+    try {
+      await connection.run(
+        Q.createTable("prices")
+          .column("id", T.int32())
+          .column("current_price", T.float64())
+          .column("previous_price", T.float64())
+          .toSQL(flavor)
+      );
+      await connection.run(
+        Q.insert("prices")
+          .values([
+            { id: 1, current_price: 0, previous_price: 0 },
+            { id: 2, current_price: 10, previous_price: 0 },
+            { id: 3, current_price: 0, previous_price: 10 },
+            { id: 4, current_price: 15, previous_price: 10 },
+            { id: 5, current_price: -5, previous_price: -10 },
+          ])
+          .toSQL(flavor)
+      );
+      const query = Q.select()
+        .field(
+          Fn.priceCurrentAndPreviousDiffField({
+            thisYearColumn: "current_price",
+            lastYearColumn: "previous_price",
+          }),
+          "diff"
+        )
+        .from("prices")
+        .orderBy("id");
+      const expected = [[0], [null], [-1], [0.5], [0.5]];
+      expect(
+        (await connection.runAndReadAll(query.toSQL(flavor))).getRows()
+      ).toEqual(expected);
+      const bound = query.toSQLWithBindings(flavor);
+      expect(
+        (await connection.runAndReadAll(bound.sql, bound.bindings as any)).getRows()
+      ).toEqual(expected);
+    } finally {
+      connection.closeSync();
+      db.closeSync();
+    }
+  });
+  it("lists only schemas from the current catalog after ATTACH", async () => {
+    const db = await DuckDBInstance.create(":memory:");
+    const connection = await db.connect();
+    try {
+      await connection.run("ATTACH ':memory:' AS attached");
+      await connection.run("CREATE SCHEMA attached.attached_only");
+      await connection.run("CREATE SCHEMA current_only");
+      const rows = (
+        await connection.runAndReadAll(Q.showSchemas().toSQL(flavor))
+      ).getRows();
+      expect(rows.filter((row) => row[0] === "main")).toHaveLength(1);
+      expect(rows).toContainEqual(["current_only"]);
+      expect(rows).not.toContainEqual(["attached_only"]);
+    } finally {
+      connection.closeSync();
+      db.closeSync();
+    }
+  });
   it("executes generated SELECT, every DDL action, defaults and all introspection requests in memory", async () => {
     const db = await DuckDBInstance.create(":memory:");
     const connection = await db.connect();
@@ -173,11 +236,11 @@ describe("DuckDB generated SQL execution", () => {
       await expect(
         connection.run(
           Q.select()
-            .field('a"; DROP TABLE typed;--')
+            .field(Q.column('a"; DROP TABLE typed;--'))
             .from("typed")
             .toSQL(flavor)
         )
-      ).rejects.toThrow();
+      ).rejects.toThrow(/Binder Error/);
       expect(
         (await connection.runAndReadAll(Q.showTables().toSQL(flavor))).getRows()
       ).toContainEqual(["main", "typed", "BASE TABLE"]);
